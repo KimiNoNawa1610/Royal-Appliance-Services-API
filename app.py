@@ -313,9 +313,9 @@ def add_employee():
 
         info = request.get_json()
         
-        postgres_employee_query = """INSERT INTO "Employees"."Employee"("employeeID", name, email, password) VALUES (%s, %s, %s, crypt(%s, gen_salt('md5')))"""
+        postgres_employee_query = """INSERT INTO "Employees"."Employee"("employeeID", name, email, password, "isAdmin") VALUES (%s, %s, %s, crypt(%s, gen_salt('md5')),%s)"""
 
-        cur.execute(postgres_employee_query,(info["employeeID"],info["name"],info["email"],info["password"]))
+        cur.execute(postgres_employee_query,(info["employeeID"],info["name"],info["email"],info["password"],info["isAdmin"]))
 
         conn.commit()
         
@@ -337,12 +337,10 @@ def get_authentication():
 
         cur.execute(postgres_invoice_query,(email,password))
 
-        out = cur.fetchall()
-
-        conn.commit()
+        out = cur.fetchone()
 
         if len(out)==1:
-            return jsonify(True)
+            return jsonify(out)
         else:
             return jsonify(False)
 

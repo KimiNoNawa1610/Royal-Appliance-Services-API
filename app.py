@@ -273,6 +273,82 @@ def get_invoice(_id):
     except Exception as e:
         return jsonify(e)
 
+@app.route("/get_all_employees/", methods=["GET"])
+@cross_origin()
+def get_all_employees():
+    try:
+        columns=[]
+        out = []
+        get_employees_query = f'SELECT * FROM "Employees"."Employee" ORDER BY "employeeID" ASC'
+        cur.execute(get_employees_query)
+        row = cur.fetchall()
+        cols = cur.description
+        for col in cols:
+            columns.append(col[0])
+        for ele in row:
+            out.append(dict(zip(columns,ele)))
+        return jsonify(out)
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_employee/<_id>", methods=["GET"])
+@cross_origin()
+def get_employee(_id):
+    try:
+        columns=[]
+        get_employee_query = f'SELECT * FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
+        cur.execute(get_employee_query)
+        row = cur.fetchone()
+        cols = cur.description
+        for col in cols:
+            columns.append(col[0])
+        return jsonify(dict(zip(columns,row)))
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/add_employee/", methods=["POST"])
+@cross_origin()
+def add_employee():
+    try:
+
+        info = request.get_json()
+        
+        postgres_employee_query = """INSERT INTO "Employees"."Employee"("employeeID", name, email, password) VALUES (%s, %s, %s, crypt(%s, gen_salt('md5')))"""
+
+        cur.execute(postgres_employee_query,(info["employeeID"],info["name"],info["email"],info["password"]))
+
+        conn.commit()
+        
+        return jsonify("New employee added")
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_authentication/", methods=["GET"])
+@cross_origin()
+def get_authentication():
+    try:
+        info = request.get_json()
+
+        email = info["email"]
+
+        password = info["password"]
+        
+        postgres_invoice_query = 'SELECT * FROM "Employees"."Employee" WHERE email = %s AND password = crypt(%s, password)'
+
+        cur.execute(postgres_invoice_query,(email,password))
+
+        out = cur.fetchall()
+
+        conn.commit()
+
+        if len(out)==1:
+            return jsonify(True)
+        else:
+            return jsonify(False)
+
+    except Exception as e:
+        return jsonify(e)
+
 @app.route("/get_all_invoices/", methods=["GET"])
 @cross_origin()
 def get_all_invoices():

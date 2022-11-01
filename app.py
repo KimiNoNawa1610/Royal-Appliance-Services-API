@@ -410,7 +410,7 @@ def get_invoice_test():
 
         html_string =""
 
-        with open('templates\invoice.html',"r") as f:
+        with open('templates\internal_invoice.html',"r") as f:
 
             html_string = f.read()
 
@@ -434,7 +434,7 @@ def get_invoice_test():
 
             t_string = ""
 
-            with open('templates\\tableRow.html',"r") as t:
+            with open('templates\internal_tableRow.html',"r") as t:
             
                 t_string = t.read()
                 
@@ -453,11 +453,11 @@ def get_invoice_test():
             html_string = html_string.replace("{{note}}","Testing")
 
         #print(html_string)
-        with open ("templates\invoice_out.html","w") as outf:
+        with open ("templates\internal_invoice_out.html","w") as outf:
             #print("written")
             outf.write(html_string)
         
-        pdf.from_file("templates\invoice_out.html","internal_invoices\\file.pdf")
+        pdf.from_file("templates\internal_invoice_out.html","internal_invoices\\file.pdf")
         
         return send_file("internal_invoices\\file.pdf", as_attachment=True)
     except Exception as e:

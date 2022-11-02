@@ -323,6 +323,19 @@ def add_employee():
     except Exception as e:
         return jsonify(e)
 
+@app.route("/delete_employee/<_id>", methods=["POST"])
+@cross_origin()
+def delete_employee(_id):
+    try:
+        postgres_employee_query = f'DELETE FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
+        cur.execute(postgres_employee_query)
+        conn.commit()
+        count = cur.rowcount
+        print(count)
+        return jsonify("INVOICE DELETED")
+    except Exception as e:
+        return jsonify(e)
+
 @app.route("/get_authentication/", methods=["GET"])
 @cross_origin()
 def get_authentication():

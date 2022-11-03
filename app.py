@@ -1,11 +1,12 @@
 import json
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, make_response
 from flask_cors import CORS, cross_origin
 import configparser
 import pdfkit as pdf
 from datetime import datetime
 import os
 import psycopg2
+import jwt
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -44,7 +45,7 @@ json = {"amount_due","rows":[{"item":"name","description":"something","rate":"pa
 "paid":,"due","note":(optional)}
 """ 
 @app.route("/generate_invoice", methods=["POST"])
-@cross_origin()
+@cross_origin("*")
 def generate_internal_invoice():
     
     if not request.args:
@@ -259,7 +260,7 @@ def generate_internal_invoice():
             return 'Content-Type not supported!'
 
 @app.route("/get_invoice/<_id>", methods=["GET"])
-@cross_origin()
+@cross_origin("*")
 def get_invoice(_id):
     try:
         columns=[]
@@ -274,7 +275,7 @@ def get_invoice(_id):
         return jsonify(e)
 
 @app.route("/get_all_employees/", methods=["GET"])
-@cross_origin()
+@cross_origin("*")
 def get_all_employees():
     try:
         columns=[]
@@ -292,7 +293,7 @@ def get_all_employees():
         return jsonify(e)
 
 @app.route("/get_employee/<_id>", methods=["GET"])
-@cross_origin()
+@cross_origin("*")
 def get_employee(_id):
     try:
         columns=[]
@@ -307,7 +308,7 @@ def get_employee(_id):
         return jsonify(e)
 
 @app.route("/add_employee/", methods=["POST"])
-@cross_origin()
+@cross_origin("*")
 def add_employee():
     try:
 
@@ -324,7 +325,7 @@ def add_employee():
         return jsonify(e)
 
 @app.route("/delete_employee/<_id>", methods=["POST"])
-@cross_origin()
+@cross_origin("*")
 def delete_employee(_id):
     try:
         postgres_employee_query = f'DELETE FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
@@ -336,10 +337,14 @@ def delete_employee(_id):
     except Exception as e:
         return jsonify(e)
 
-@app.route("/get_authentication/", methods=["GET"])
-@cross_origin()
+@app.route("/authentication/", methods=["POST", "OPTIONS"])
+@cross_origin("*")
 def get_authentication():
+    print(request.method)
+
+
     try:
+        print(request)
         info = request.get_json()
 
         email = info["email"]
@@ -350,9 +355,16 @@ def get_authentication():
 
         cur.execute(postgres_invoice_query,(email,password))
 
-        out = cur.fetchone()
+        result = cur.fetchone()
 
-        if len(out)==1:
+        if result:
+            print("verified")
+            out={"name":None,"email":None,"isAdmin":None,"token":None}
+            token = jwt.encode(payload=info,key=app_conf.get("key","secret_key"))
+            out["name"]=result[1]
+            out["email"]=result[2]
+            out["isAdmin"]=result[4]
+            out["token"]=token
             return jsonify(out)
         else:
             return jsonify(False)
@@ -361,7 +373,7 @@ def get_authentication():
         return jsonify(e)
 
 @app.route("/get_all_invoices/", methods=["GET"])
-@cross_origin()
+@cross_origin("*")
 def get_all_invoices():
     try:
         columns=[]
@@ -379,7 +391,7 @@ def get_all_invoices():
         return jsonify(e)
 
 @app.route("/delete_invoice/<_id>", methods=["POST"])
-@cross_origin()
+@cross_origin("*")
 def delete_invoice(_id):
     try:
         file_path1 = f"internal_invoices\\invoice_{_id}.pdf"
@@ -396,7 +408,7 @@ def delete_invoice(_id):
         return jsonify(e)
 
 @app.route("/download_invoice/<_folder>/<_id>", methods=["GET"])
-@cross_origin()
+@cross_origin("*")
 def download_invoice(_folder,_id):
     try:
         if _folder =="internal":
@@ -412,12 +424,12 @@ def download_invoice(_folder,_id):
         return jsonify(e)
 
 @app.route("/connection_test",methods = ["GET","POST"])
-@cross_origin()
+@cross_origin("*")
 def connection_test():
     return jsonify("Rest API is running")
 
 @app.route("/get_invoice_test",methods = ["GET"])
-@cross_origin()
+@cross_origin("*")
 def get_invoice_test():
     try:
 

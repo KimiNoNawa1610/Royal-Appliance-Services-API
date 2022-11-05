@@ -49,256 +49,278 @@ json = {"amount_due","rows":[{"item":"name","description":"something","rate":"pa
 @app.route("/generate_invoice", methods=["POST"])
 @cross_origin(support_credentials=True)
 def generate_internal_invoice():
-
-    if not request.args:
-
-        return jsonify("Please include all necessary attributes")
-
+    if "token" not in request.headers:
+            return jsonify("no token in the header")
     else:
+        #print(request.headers["token"])
+        try:
+            profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
 
-        content_type = request.headers.get('Content-Type')
+            print(profile)
 
-        # print(content_type)
+        except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+            return jsonify("Token Error")
 
-        if (content_type == 'application/json'):
+        if not request.args:
 
-            if "invoice_number" not in request.args:
-
-                return jsonify("Please include the invoice number")
-
-            date_string = ""
-
-            if "date" not in request.args:
-
-                date = datetime.now()
-
-                date_string = f"{str(date.month)}/{str(date.day)}/{str(date.year)}"
-
-            else:
-
-                date_string = request.args["date"]
-
-            info = request.get_json()
-
-            invoice_number = request.args["invoice_number"]
-
-            try:
-
-                with open('templates\internal_invoice.html', "r") as f:
-
-                    html_string = f.read()
-
-                    # print(app_conf.get("client_info","name"))
-
-                    html_string = html_string.replace(
-                        "{{company_name}}", app_conf.get("client_info", "name"))
-
-                    html_string = html_string.replace(
-                        "{{client}}", info["client"])
-
-                    html_string = html_string.replace(
-                        "{{street_address}}", app_conf.get("client_info", "street_address"))
-
-                    html_string = html_string.replace(
-                        "{{city_zipcode}}", app_conf.get("client_info", "city_zipcode"))
-
-                    html_string = html_string.replace(
-                        "{{phone_number}}", app_conf.get("client_info", "phone"))
-
-                    html_string = html_string.replace("{{date}}", date_string)
-
-                    t_string = ""
-
-                    rows = ""
-
-                    values = {'id': invoice_number, 'total': 0, 'net': 0, 'shipping': 0, 'my_part': 0,
-                              'labor': 0, 'tax': 0, 'sell': 0, 'part_installed': "", 'paid_by': ""}
-
-                    with open('templates\internal_tableRow.html', "r") as t:
-
-                        t_string = t.read()
-
-                        for row in info["rows"]:
-
-                            rows += t_string.replace("{{item}}", str(row["item"])).replace("{{my_part}}", str(row["my_part"])).replace("{{labor}}", str(row["labor"])).replace("{{tax}}", str(row["tax"])).replace("{{shipping}}", str(
-                                row["shipping"])).replace("{{sell}}", str(row["sell"])).replace("{{paid_by}}", row["paid_by"]).replace("{{net}}", str(row["total"]-row["my_part"]-row["tax"])).replace("{{total}}", str(row["total"]))
-
-                            # print(row)
-
-                            values['total'] += row["total"]
-
-                            values['net'] += row["total"] - \
-                                row["my_part"]-row["tax"]
-
-                            values['shipping'] += row["shipping"]
-
-                            values['my_part'] += row["my_part"]
-
-                            values['labor'] += row["labor"]
-
-                            values['tax'] += row['tax']
-
-                            values['sell'] += row['sell']
-
-                            values['part_installed'] += row["item"]+", "
-
-                            values['paid_by'] += row["paid_by"]+", "
-
-                    html_string = html_string.replace("{{rows}}", rows)
-
-                    html_string = html_string.replace(
-                        "{{total}}", str(values['total']))
-
-                    html_string = html_string.replace(
-                        "{{paid}}", str(info["paid"]))
-
-                    html_string = html_string.replace(
-                        "{{due}}", str(values['total'] - info["paid"]))
-
-                    html_string = html_string.replace(
-                        "{{invoice_number}}", invoice_number)
-
-                    html_string = html_string.replace("{{note}}", info["note"])
-
-                # client invoice
-
-                with open('templates\client_invoice.html', "r") as f:
-
-                    html_string = f.read()
-
-                    # print(app_conf.get("client_info","name"))
-
-                    html_string = html_string.replace(
-                        "{{company_name}}", app_conf.get("client_info", "name"))
-
-                    html_string = html_string.replace(
-                        "{{client}}", info["client"])
-
-                    html_string = html_string.replace(
-                        "{{street_address}}", app_conf.get("client_info", "street_address"))
-
-                    html_string = html_string.replace(
-                        "{{city_zipcode}}", app_conf.get("client_info", "city_zipcode"))
-
-                    html_string = html_string.replace(
-                        "{{phone_number}}", app_conf.get("client_info", "phone"))
-
-                    html_string = html_string.replace("{{date}}", date_string)
-
-                    t_string = ""
-
-                    rows = ""
-
-                    values = {'id': invoice_number, 'total': 0, 'net': 0, 'shipping': 0, 'my_part': 0,
-                              'labor': 0, 'tax': 0, 'sell': 0, 'part_installed': "", 'paid_by': ""}
-
-                    with open('templates\client_tableRow.html', "r") as t:
-
-                        t_string = t.read()
-
-                        for row in info["rows"]:
-
-                            rows += t_string.replace("{{item}}", str(row["item"])).replace("{{tax}}", str(row["tax"])).replace(
-                                "{{shipping}}", str(row["shipping"])).replace("{{paid_by}}", row["paid_by"]).replace("{{total}}", str(row["total"]))
-
-                            # print(row)
-
-                            values['total'] += row["total"]
-
-                            values['shipping'] += row["shipping"]
-
-                            values['tax'] += row['tax']
-
-                            values['part_installed'] += row["item"]+", "
-
-                            values['paid_by'] += row["paid_by"]+", "
-
-                    html_string = html_string.replace("{{rows}}", rows)
-
-                    html_string = html_string.replace(
-                        "{{total}}", str(values['total']))
-
-                    html_string = html_string.replace(
-                        "{{paid}}", str(info["paid"]))
-
-                    html_string = html_string.replace(
-                        "{{due}}", str(values['total'] - info["paid"]))
-
-                    html_string = html_string.replace(
-                        "{{invoice_number}}", invoice_number)
-
-                # print(html_string)
-
-                with open("templates\internal_invoice_out.html", "w") as outf:
-
-                    # print("written")
-
-                    outf.write(html_string)
-
-                with open("templates\client_invoice_out.html", "w") as outf:
-
-                    # print("written")
-
-                    outf.write(html_string)
-
-                save_path1 = f"internal_invoices\invoice_{str(invoice_number)}.pdf"
-                save_path2 = f"client_invoices\invoice_{str(invoice_number)}.pdf"
-
-                if not os.path.exists(save_path1):
-
-                    with open(save_path1, "w") as outp:
-
-                        # print("written")
-
-                        outp.write(" ")
-
-                if not os.path.exists(save_path2):
-
-                    with open(save_path2, "w") as outp:
-
-                        # print("written")
-
-                        outp.write(" ")
-
-                pdf.from_file(
-                    "templates\internal_invoice_out.html", save_path1)
-
-                pdf.from_file("templates\client_invoice_out.html", save_path2)
-
-                postgres_insert_query = """ INSERT INTO "Invoices".invoices(id, total, my_part, labor, tax, shipping, net, part_installed, client_sell, paid_by) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-
-                cur.execute(postgres_insert_query, (values["id"], values["total"], values["my_part"], values["labor"], values["tax"],
-                            values["shipping"], values["net"], values["part_installed"][:-2], values["sell"], values["paid_by"][:-2]))
-
-                conn.commit()
-
-                count = cur.rowcount
-
-                print(count, "Record inserted successfully into invoices table")
-
-                return jsonify("Invoice Generated")
-
-            except Exception as e:
-
-                return jsonify(e)
+            return jsonify("Please include all necessary attributes")
 
         else:
 
-            return 'Content-Type not supported!'
+            content_type = request.headers.get('Content-Type')
+
+            # print(content_type)
+
+            if (content_type == 'application/json'):
+
+                if "invoice_number" not in request.args:
+
+                    return jsonify("Please include the invoice number")
+
+                date_string = ""
+
+                if "date" not in request.args:
+
+                    date = datetime.now()
+
+                    date_string = f"{str(date.month)}/{str(date.day)}/{str(date.year)}"
+
+                else:
+
+                    date_string = request.args["date"]
+
+                info = request.get_json()
+
+                invoice_number = request.args["invoice_number"]
+
+                try:
+
+                    with open('templates\internal_invoice.html', "r") as f:
+
+                        html_string = f.read()
+
+                        # print(app_conf.get("client_info","name"))
+
+                        html_string = html_string.replace(
+                            "{{company_name}}", app_conf.get("client_info", "name"))
+
+                        html_string = html_string.replace(
+                            "{{client}}", info["client"])
+
+                        html_string = html_string.replace(
+                            "{{street_address}}", app_conf.get("client_info", "street_address"))
+
+                        html_string = html_string.replace(
+                            "{{city_zipcode}}", app_conf.get("client_info", "city_zipcode"))
+
+                        html_string = html_string.replace(
+                            "{{phone_number}}", app_conf.get("client_info", "phone"))
+
+                        html_string = html_string.replace("{{date}}", date_string)
+
+                        t_string = ""
+
+                        rows = ""
+
+                        values = {'id': invoice_number, 'total': 0, 'net': 0, 'shipping': 0, 'my_part': 0,
+                                'labor': 0, 'tax': 0, 'sell': 0, 'part_installed': "", 'paid_by': ""}
+
+                        with open('templates\internal_tableRow.html', "r") as t:
+
+                            t_string = t.read()
+
+                            for row in info["rows"]:
+
+                                rows += t_string.replace("{{item}}", str(row["item"])).replace("{{my_part}}", str(row["my_part"])).replace("{{labor}}", str(row["labor"])).replace("{{tax}}", str(row["tax"])).replace("{{shipping}}", str(
+                                    row["shipping"])).replace("{{sell}}", str(row["sell"])).replace("{{paid_by}}", row["paid_by"]).replace("{{net}}", str(row["total"]-row["my_part"]-row["tax"])).replace("{{total}}", str(row["total"]))
+
+                                # print(row)
+
+                                values['total'] += row["total"]
+
+                                values['net'] += row["total"] - \
+                                    row["my_part"]-row["tax"]
+
+                                values['shipping'] += row["shipping"]
+
+                                values['my_part'] += row["my_part"]
+
+                                values['labor'] += row["labor"]
+
+                                values['tax'] += row['tax']
+
+                                values['sell'] += row['sell']
+
+                                values['part_installed'] += row["item"]+", "
+
+                                values['paid_by'] += row["paid_by"]+", "
+
+                        html_string = html_string.replace("{{rows}}", rows)
+
+                        html_string = html_string.replace(
+                            "{{total}}", str(values['total']))
+
+                        html_string = html_string.replace(
+                            "{{paid}}", str(info["paid"]))
+
+                        html_string = html_string.replace(
+                            "{{due}}", str(values['total'] - info["paid"]))
+
+                        html_string = html_string.replace(
+                            "{{invoice_number}}", invoice_number)
+
+                        html_string = html_string.replace("{{note}}", info["note"])
+
+                    # client invoice
+
+                    with open('templates\client_invoice.html', "r") as f:
+
+                        html_string = f.read()
+
+                        # print(app_conf.get("client_info","name"))
+
+                        html_string = html_string.replace(
+                            "{{company_name}}", app_conf.get("client_info", "name"))
+
+                        html_string = html_string.replace(
+                            "{{client}}", info["client"])
+
+                        html_string = html_string.replace(
+                            "{{street_address}}", app_conf.get("client_info", "street_address"))
+
+                        html_string = html_string.replace(
+                            "{{city_zipcode}}", app_conf.get("client_info", "city_zipcode"))
+
+                        html_string = html_string.replace(
+                            "{{phone_number}}", app_conf.get("client_info", "phone"))
+
+                        html_string = html_string.replace("{{date}}", date_string)
+
+                        t_string = ""
+
+                        rows = ""
+
+                        values = {'id': invoice_number, 'total': 0, 'net': 0, 'shipping': 0, 'my_part': 0,
+                                'labor': 0, 'tax': 0, 'sell': 0, 'part_installed': "", 'paid_by': ""}
+
+                        with open('templates\client_tableRow.html', "r") as t:
+
+                            t_string = t.read()
+
+                            for row in info["rows"]:
+
+                                rows += t_string.replace("{{item}}", str(row["item"])).replace("{{tax}}", str(row["tax"])).replace(
+                                    "{{shipping}}", str(row["shipping"])).replace("{{paid_by}}", row["paid_by"]).replace("{{total}}", str(row["total"]))
+
+                                # print(row)
+
+                                values['total'] += row["total"]
+
+                                values['shipping'] += row["shipping"]
+
+                                values['tax'] += row['tax']
+
+                                values['part_installed'] += row["item"]+", "
+
+                                values['paid_by'] += row["paid_by"]+", "
+
+                        html_string = html_string.replace("{{rows}}", rows)
+
+                        html_string = html_string.replace(
+                            "{{total}}", str(values['total']))
+
+                        html_string = html_string.replace(
+                            "{{paid}}", str(info["paid"]))
+
+                        html_string = html_string.replace(
+                            "{{due}}", str(values['total'] - info["paid"]))
+
+                        html_string = html_string.replace(
+                            "{{invoice_number}}", invoice_number)
+
+                    # print(html_string)
+
+                    with open("templates\internal_invoice_out.html", "w") as outf:
+
+                        # print("written")
+
+                        outf.write(html_string)
+
+                    with open("templates\client_invoice_out.html", "w") as outf:
+
+                        # print("written")
+
+                        outf.write(html_string)
+
+                    save_path1 = f"internal_invoices\invoice_{str(invoice_number)}.pdf"
+                    save_path2 = f"client_invoices\invoice_{str(invoice_number)}.pdf"
+
+                    if not os.path.exists(save_path1):
+
+                        with open(save_path1, "w") as outp:
+
+                            # print("written")
+
+                            outp.write(" ")
+
+                    if not os.path.exists(save_path2):
+
+                        with open(save_path2, "w") as outp:
+
+                            # print("written")
+
+                            outp.write(" ")
+
+                    pdf.from_file(
+                        "templates\internal_invoice_out.html", save_path1)
+
+                    pdf.from_file("templates\client_invoice_out.html", save_path2)
+
+                    postgres_insert_query = """ INSERT INTO "Invoices".invoices(id, total, my_part, labor, tax, shipping, net, part_installed, client_sell, paid_by) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+
+                    cur.execute(postgres_insert_query, (values["id"], values["total"], values["my_part"], values["labor"], values["tax"],
+                                values["shipping"], values["net"], values["part_installed"][:-2], values["sell"], values["paid_by"][:-2]))
+
+                    conn.commit()
+
+                    count = cur.rowcount
+
+                    print(count, "Record inserted successfully into invoices table")
+
+                    return jsonify("Invoice Generated")
+
+                except Exception as e:
+
+                    return jsonify(e)
+
+            else:
+
+                return 'Content-Type not supported!'
 
 
 @app.route("/get_invoice/<_id>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_invoice(_id):
     try:
-        columns = []
-        postgres_invoice_query = f'SELECT * FROM "Invoices".invoices WHERE id = {_id}'
-        cur.execute(postgres_invoice_query)
-        row = cur.fetchone()
-        cols = cur.description
-        for col in cols:
-            columns.append(col[0])
-        return jsonify(dict(zip(columns, row)))
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+            columns = []
+            postgres_invoice_query = f'SELECT * FROM "Invoices".invoices WHERE id = {_id}'
+            cur.execute(postgres_invoice_query)
+            row = cur.fetchone()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            return jsonify(dict(zip(columns, row)))
     except Exception as e:
         return jsonify(e)
 
@@ -355,14 +377,27 @@ def get_all_employees():
 @cross_origin(support_credentials=True)
 def get_employee(_id):
     try:
-        columns = []
-        get_employee_query = f'SELECT * FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
-        cur.execute(get_employee_query)
-        row = cur.fetchone()
-        cols = cur.description
-        for col in cols:
-            columns.append(col[0])
-        return jsonify(dict(zip(columns, row)))
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            columns = []
+            get_employee_query = f'SELECT * FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
+            cur.execute(get_employee_query)
+            row = cur.fetchone()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            return jsonify(dict(zip(columns, row)))
+
     except Exception as e:
         return jsonify(e)
 
@@ -371,37 +406,49 @@ def get_employee(_id):
 @cross_origin(support_credentials=True)
 def add_employee():
     try:
-
-        info = request.get_json()
-
-        postgres_employee_search = f"""SELECT "employeeID", name, email, password, "isAdmin" FROM "Employees"."Employee" WHERE "employeeID"={info["employeeID"]};"""
-
-        cur.execute(postgres_employee_search)
-
-        row = cur.fetchone()
-
-        print(row)
-
-        if row:
-
-            postgres_employee_update = """UPDATE "Employees"."Employee" SET "employeeID"=%s, name=%s, email=%s, password=%s, "isAdmin"=%s WHERE "employeeID" = %s;"""
-
-            cur.execute(postgres_employee_update,  (info["employeeID"], info["name"], info["email"], info["password"], info["isAdmin"],info["employeeID"]))
-
-            conn.commit()
-
-            return jsonify(f"Employee {info['name']} is updated")
-
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
         else:
+            #print(request.headers["token"])
 
-            postgres_employee_query = """INSERT INTO "Employees"."Employee"("employeeID", name, email, password, "isAdmin") VALUES (%s, %s, %s, crypt(%s, gen_salt('md5')),%s)"""
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
 
-            cur.execute(postgres_employee_query,
-                        (info["employeeID"], info["name"], info["email"], info["password"], info["isAdmin"]))
+                print(profile)
 
-            conn.commit()
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
 
-            return jsonify("New employee added")
+            info = request.get_json()
+
+            postgres_employee_search = f"""SELECT "employeeID", name, email, password, "isAdmin" FROM "Employees"."Employee" WHERE "employeeID"={info["employeeID"]};"""
+
+            cur.execute(postgres_employee_search)
+
+            row = cur.fetchone()
+
+            print(row)
+
+            if row:
+
+                postgres_employee_update = """UPDATE "Employees"."Employee" SET "employeeID"=%s, name=%s, email=%s, password=%s, "isAdmin"=%s WHERE "employeeID" = %s;"""
+
+                cur.execute(postgres_employee_update,  (info["employeeID"], info["name"], info["email"], info["password"], info["isAdmin"],info["employeeID"]))
+
+                conn.commit()
+
+                return jsonify(f"Employee {info['name']} is updated")
+
+            else:
+
+                postgres_employee_query = """INSERT INTO "Employees"."Employee"("employeeID", name, email, password, "isAdmin") VALUES (%s, %s, %s, crypt(%s, gen_salt('md5')),%s)"""
+
+                cur.execute(postgres_employee_query,
+                            (info["employeeID"], info["name"], info["email"], info["password"], info["isAdmin"]))
+
+                conn.commit()
+
+                return jsonify("New employee added")
 
     except Exception as e:
         return jsonify(e)
@@ -411,12 +458,26 @@ def add_employee():
 @cross_origin(support_credentials=True)
 def delete_employee(_id):
     try:
-        postgres_employee_query = f'DELETE FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
-        cur.execute(postgres_employee_query)
-        conn.commit()
-        count = cur.rowcount
-        print(count)
-        return jsonify("INVOICE DELETED")
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            postgres_employee_query = f'DELETE FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
+            cur.execute(postgres_employee_query)
+            conn.commit()
+            count = cur.rowcount
+            print(count)
+            return jsonify("EMPLOYEE DELETED")
+
     except Exception as e:
         return jsonify(e)
 
@@ -460,17 +521,29 @@ def get_authentication():
 @cross_origin(support_credentials=True)
 def get_all_invoices():
     try:
-        columns = []
-        out = []
-        postgres_invoice_query = f'SELECT * FROM "Invoices".invoices'
-        cur.execute(postgres_invoice_query)
-        row = cur.fetchall()
-        cols = cur.description
-        for col in cols:
-            columns.append(col[0])
-        for ele in row:
-            out.append(dict(zip(columns, ele)))
-        return jsonify(out)
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            columns = []
+            out = []
+            postgres_invoice_query = f'SELECT * FROM "Invoices".invoices'
+            cur.execute(postgres_invoice_query)
+            row = cur.fetchall()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            for ele in row:
+                out.append(dict(zip(columns, ele)))
+            return jsonify(out)
     except Exception as e:
         return jsonify(e)
 
@@ -479,16 +552,28 @@ def get_all_invoices():
 @cross_origin(support_credentials=True)
 def delete_invoice(_id):
     try:
-        file_path1 = f"internal_invoices\\invoice_{_id}.pdf"
-        file_path2 = f"client_invoices\\invoice_{_id}.pdf"
-        postgres_invoice_query = f'DELETE FROM "Invoices".invoices WHERE id = {_id}'
-        cur.execute(postgres_invoice_query)
-        conn.commit()
-        count = cur.rowcount
-        os.remove(file_path1)
-        os.remove(file_path2)
-        print(count)
-        return jsonify("INVOICE DELETED")
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                    return jsonify("Token Error")
+
+            file_path1 = f"internal_invoices\\invoice_{_id}.pdf"
+            file_path2 = f"client_invoices\\invoice_{_id}.pdf"
+            postgres_invoice_query = f'DELETE FROM "Invoices".invoices WHERE id = {_id}'
+            cur.execute(postgres_invoice_query)
+            conn.commit()
+            count = cur.rowcount
+            os.remove(file_path1)
+            os.remove(file_path2)
+            print(count)
+            return jsonify("INVOICE DELETED")
     except Exception as e:
         return jsonify(e)
 
@@ -497,15 +582,27 @@ def delete_invoice(_id):
 @cross_origin(support_credentials=True)
 def download_invoice(_folder, _id):
     try:
-        if _folder == "internal":
-            file_path = f"internal_invoices\\invoice_{_id}.pdf"
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
         else:
-            file_path = f"client_invoices\\invoice_{_id}.pdf"
-        print(file_path)
-        if os.path.exists(file_path):
-            return send_file(file_path, as_attachment=True)
-        else:
-            return jsonify("Invoice with that id does not exist")
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            if _folder == "internal":
+                file_path = f"internal_invoices\\invoice_{_id}.pdf"
+            else:
+                file_path = f"client_invoices\\invoice_{_id}.pdf"
+            print(file_path)
+            if os.path.exists(file_path):
+                return send_file(file_path, as_attachment=True)
+            else:
+                return jsonify("Invoice with that id does not exist")
     except Exception as e:
         return jsonify(e)
 

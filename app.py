@@ -9,7 +9,7 @@ import psycopg2
 import jwt
 
 app = Flask(__name__)
-cors = CORS(app,support_credentials=True)
+cors = CORS(app, support_credentials=True)
 app.config["CORS_HEADERS"] = 'Content-Type'
 app.config["SECRET_KEY"] = 'ROYALAPPLIANCE2022!'
 
@@ -40,7 +40,7 @@ print(db_version)
 
 """
 args ex:
-params = {"invoice_number":00000,"date": (optional)} 
+params = {"invoice_number":00000,"date": (optional)}
 json = {"amount_due","rows":[{"item":"name","description":"something","rate":"pay rate","quantity":1,"price":699}],"total":total,
 "paid":,"due","note":(optional)}
 """
@@ -52,13 +52,14 @@ def generate_internal_invoice():
     if "token" not in request.headers:
             return jsonify("no token in the header")
     else:
-        #print(request.headers["token"])
+        # print(request.headers["token"])
         try:
-            profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+            profile = jwt.decode(request.headers["token"], key=app_conf.get(
+                "key", "secret_key"), algorithms=["HS256"])
 
             print(profile)
 
-        except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+        except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError, json.decoder.JSONDecodeError) as e:
             return jsonify("Token Error")
 
         if not request.args:
@@ -116,7 +117,8 @@ def generate_internal_invoice():
                         html_string = html_string.replace(
                             "{{phone_number}}", app_conf.get("client_info", "phone"))
 
-                        html_string = html_string.replace("{{date}}", date_string)
+                        html_string = html_string.replace(
+                            "{{date}}", date_string)
 
                         t_string = ""
 
@@ -169,7 +171,24 @@ def generate_internal_invoice():
                         html_string = html_string.replace(
                             "{{invoice_number}}", invoice_number)
 
-                        html_string = html_string.replace("{{note}}", info["note"])
+                        html_string = html_string.replace(
+                            "{{note}}", info["note"])
+
+                    with open("templates\internal_invoice_out.html", "w") as outf:
+
+                        # print("written")
+
+                        outf.write(html_string)
+
+                    save_path1 = f"internal_invoices\invoice_{str(invoice_number)}.pdf"
+
+                    if not os.path.exists(save_path1):
+
+                        with open(save_path1, "w") as outp:
+
+                            # print("written")
+
+                            outp.write(" ")
 
                     # client invoice
 
@@ -194,7 +213,8 @@ def generate_internal_invoice():
                         html_string = html_string.replace(
                             "{{phone_number}}", app_conf.get("client_info", "phone"))
 
-                        html_string = html_string.replace("{{date}}", date_string)
+                        html_string = html_string.replace(
+                            "{{date}}", date_string)
 
                         t_string = ""
 
@@ -240,11 +260,7 @@ def generate_internal_invoice():
 
                     # print(html_string)
 
-                    with open("templates\internal_invoice_out.html", "w") as outf:
-
-                        # print("written")
-
-                        outf.write(html_string)
+                    
 
                     with open("templates\client_invoice_out.html", "w") as outf:
 
@@ -252,16 +268,10 @@ def generate_internal_invoice():
 
                         outf.write(html_string)
 
-                    save_path1 = f"internal_invoices\invoice_{str(invoice_number)}.pdf"
+                    
                     save_path2 = f"client_invoices\invoice_{str(invoice_number)}.pdf"
 
-                    if not os.path.exists(save_path1):
 
-                        with open(save_path1, "w") as outp:
-
-                            # print("written")
-
-                            outp.write(" ")
 
                     if not os.path.exists(save_path2):
 

@@ -463,7 +463,90 @@ def add_employee():
     except Exception as e:
         return jsonify(e)
 
-#CHECK
+@app.route("/get_all_jobs/", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_all_jobs():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+                
+            columns = []
+            postgres_jobs_query = f'SELECT "jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs";'
+            cur.execute(postgres_jobs_query)
+            rows = cur.fetchall()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            out = []
+            for row in rows:
+                out.append(dict(zip(columns, row)))
+            return jsonify(out)
+            
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_jobs/<_employee_id>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_jobs(_employee_id):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+            columns = []
+            postgres_jobs_query = f'SELECT "EmployeeJobs"."employeeID","Jobs"."jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID" WHERE "EmployeeJobs"."employeeID" = {_employee_id};'
+            cur.execute(postgres_jobs_query)
+            rows = cur.fetchall()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            out = []
+            for row in rows:
+                out.append(dict(zip(columns, row)))
+            return jsonify(out)
+
+    except Exception as e:
+        return jsonify(e)
+
+#Working
+@app.route("/assign_job/<_client_id>/<_employee_id>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def assign_job(_client_id,_employee_id):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+    except Exception as e:
+        return jsonify(e)
+#Fixed
 @app.route("/delete_employee/<_id>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def delete_employee(_id):
@@ -557,7 +640,7 @@ def get_all_invoices():
     except Exception as e:
         return jsonify(e)
 
-#CHECK
+#FIXED
 @app.route("/delete_invoice/<_id>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def delete_invoice(_id):
@@ -587,7 +670,7 @@ def delete_invoice(_id):
     except Exception as e:
         return jsonify(e)
 
-#CHECK
+#FIXED
 @app.route("/download_invoice/<_folder>/<_id>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def download_invoice(_folder, _id):
@@ -622,7 +705,7 @@ def download_invoice(_folder, _id):
 def connection_test():
     return jsonify("Rest API is running")
 
-#CHECK
+#FIXED
 @app.route("/get_invoice_test", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_invoice_test():

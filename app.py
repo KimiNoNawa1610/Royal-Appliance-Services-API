@@ -495,9 +495,9 @@ def get_all_jobs():
     except Exception as e:
         return jsonify(e)
 
-@app.route("/get_jobs/<_employee_id>", methods=["GET"])
+@app.route("/get_jobs/<_employee_id>/<_start_date>/<_end_date>", methods=["GET"])
 @cross_origin(support_credentials=True)
-def get_jobs(_employee_id):
+def get_jobs(_employee_id,_start_date,_end_date):
     try:
         if "token" not in request.headers:
             return jsonify("no token in the header")
@@ -512,7 +512,7 @@ def get_jobs(_employee_id):
             except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
                 return jsonify("Token Error")
             columns = []
-            postgres_jobs_query = f'SELECT "EmployeeJobs"."employeeID","Jobs"."jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID" WHERE "EmployeeJobs"."employeeID" = {_employee_id};'
+            postgres_jobs_query = f'''SELECT "EmployeeJobs"."employeeID","Jobs"."jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
             cur.execute(postgres_jobs_query)
             rows = cur.fetchall()
             cols = cur.description

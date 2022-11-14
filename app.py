@@ -307,7 +307,7 @@ def generate_internal_invoice():
 
                 return 'Content-Type not supported!'
 
-
+#FIXED
 @app.route("/get_invoice/<_id>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_invoice(_id):
@@ -324,7 +324,7 @@ def get_invoice(_id):
             except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
                 return jsonify("Token Error")
             columns = []
-            postgres_invoice_query = f'SELECT * FROM "Invoices".invoices WHERE id = {_id}'
+            postgres_invoice_query = f'SELECT * FROM "Invoice"."Invoices" WHERE "invoiceID" =  {_id}'
             cur.execute(postgres_invoice_query)
             row = cur.fetchone()
             cols = cur.description
@@ -334,7 +334,7 @@ def get_invoice(_id):
     except Exception as e:
         return jsonify(e)
 
-
+#FIXED
 @app.route("/get_all_employees/", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_all_employees():
@@ -353,7 +353,7 @@ def get_all_employees():
                     return jsonify("Token Error")
 
 
-                postgres_employee_search = f"""SELECT * FROM "Employees"."Employee" WHERE email='{profile['email']}';"""
+                postgres_employee_search = f"""SELECT * FROM "Employee"."Employees" WHERE email='{profile['email']}';"""
 
                 cur.execute(postgres_employee_search)
 
@@ -363,7 +363,7 @@ def get_all_employees():
             
                     columns = []
                     out = []
-                    get_employees_query = f'SELECT * FROM "Employees"."Employee" ORDER BY "employeeID" ASC'
+                    get_employees_query = f'SELECT * FROM "Employee"."Employees" ORDER BY "employeeID" ASC'
                     cur.execute(get_employees_query)
                     row = cur.fetchall()
                     cols = cur.description
@@ -382,7 +382,7 @@ def get_all_employees():
     except Exception as e:
         return jsonify(e)
 
-
+#FIXED
 @app.route("/get_employee/<_id>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_employee(_id):
@@ -400,7 +400,7 @@ def get_employee(_id):
                 return jsonify("Token Error")
 
             columns = []
-            get_employee_query = f'SELECT * FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
+            get_employee_query = f'SELECT * FROM "Employee"."Employees" WHERE "employeeID" = {_id}'
             cur.execute(get_employee_query)
             row = cur.fetchone()
             cols = cur.description
@@ -411,7 +411,7 @@ def get_employee(_id):
     except Exception as e:
         return jsonify(e)
 
-
+#FIXED
 @app.route("/add_employee/", methods=["POST"])
 @cross_origin(support_credentials=True)
 def add_employee():
@@ -431,7 +431,7 @@ def add_employee():
 
             info = request.get_json()
 
-            postgres_employee_search = f"""SELECT "employeeID", name, email, password, "isAdmin" FROM "Employees"."Employee" WHERE "employeeID"={info["employeeID"]};"""
+            postgres_employee_search = f"""SELECT "employeeID", name, email, password, "isAdmin" FROM "Employee"."Employees" WHERE "employeeID"={info["employeeID"]};"""
 
             cur.execute(postgres_employee_search)
 
@@ -441,7 +441,7 @@ def add_employee():
 
             if row:
 
-                postgres_employee_update = """UPDATE "Employees"."Employee" SET "employeeID"=%s, name=%s, email=%s, password=%s, "isAdmin"=%s WHERE "employeeID" = %s;"""
+                postgres_employee_update = """UPDATE "Employee"."Employees" SET "employeeID"=%s, name=%s, email=%s, password=%s, "isAdmin"=%s WHERE "employeeID" = %s;"""
 
                 cur.execute(postgres_employee_update,  (info["employeeID"], info["name"], info["email"], info["password"], info["isAdmin"],info["employeeID"]))
 
@@ -451,7 +451,7 @@ def add_employee():
 
             else:
 
-                postgres_employee_query = """INSERT INTO "Employees"."Employee"("employeeID", name, email, password, "isAdmin") VALUES (%s, %s, %s, crypt(%s, gen_salt('md5')),%s)"""
+                postgres_employee_query = """INSERT INTO "Employee"."Employees"("employeeID", name, email, password, "isAdmin") VALUES (%s, %s, %s, crypt(%s, gen_salt('md5')),%s)"""
 
                 cur.execute(postgres_employee_query,
                             (info["employeeID"], info["name"], info["email"], info["password"], info["isAdmin"]))
@@ -463,7 +463,7 @@ def add_employee():
     except Exception as e:
         return jsonify(e)
 
-
+#CHECK
 @app.route("/delete_employee/<_id>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def delete_employee(_id):
@@ -481,7 +481,7 @@ def delete_employee(_id):
             except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
                 return jsonify("Token Error")
 
-            postgres_employee_query = f'DELETE FROM "Employees"."Employee" WHERE "employeeID" = {_id}'
+            postgres_employee_query = f'DELETE FROM "Employee"."Employees" WHERE "employeeID" = {_id}'
             cur.execute(postgres_employee_query)
             conn.commit()
             count = cur.rowcount
@@ -505,7 +505,7 @@ def get_authentication():
 
         password = info["password"]
 
-        postgres_invoice_query = 'SELECT * FROM "Employees"."Employee" WHERE email = %s AND password = crypt(%s, password)'
+        postgres_invoice_query = 'SELECT * FROM "Employee"."Employees" WHERE email = %s AND password = crypt(%s, password)'
 
         cur.execute(postgres_invoice_query, (email, password))
 
@@ -526,7 +526,7 @@ def get_authentication():
     except Exception as e:
         return jsonify(e)
 
-
+#FIXED
 @app.route("/get_all_invoices/", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_all_invoices():
@@ -545,7 +545,7 @@ def get_all_invoices():
 
             columns = []
             out = []
-            postgres_invoice_query = f'SELECT * FROM "Invoices".invoices'
+            postgres_invoice_query = f'SELECT * FROM "Invoice"."Invoices"'
             cur.execute(postgres_invoice_query)
             row = cur.fetchall()
             cols = cur.description
@@ -557,7 +557,7 @@ def get_all_invoices():
     except Exception as e:
         return jsonify(e)
 
-
+#CHECK
 @app.route("/delete_invoice/<_id>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def delete_invoice(_id):
@@ -576,7 +576,7 @@ def delete_invoice(_id):
 
             file_path1 = f"internal_invoices\\invoice_{_id}.pdf"
             file_path2 = f"client_invoices\\invoice_{_id}.pdf"
-            postgres_invoice_query = f'DELETE FROM "Invoices".invoices WHERE id = {_id}'
+            postgres_invoice_query = f'DELETE FROM "Invoice"."Invoices" WHERE "Invoices"."invoiceID" = {_id}'
             cur.execute(postgres_invoice_query)
             conn.commit()
             count = cur.rowcount
@@ -587,7 +587,7 @@ def delete_invoice(_id):
     except Exception as e:
         return jsonify(e)
 
-
+#CHECK
 @app.route("/download_invoice/<_folder>/<_id>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def download_invoice(_folder, _id):
@@ -622,7 +622,7 @@ def download_invoice(_folder, _id):
 def connection_test():
     return jsonify("Rest API is running")
 
-
+#CHECK
 @app.route("/get_invoice_test", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_invoice_test():
@@ -689,6 +689,81 @@ def get_invoice_test():
     except Exception as e:
         return jsonify(e)
 
+'''BRIANS QUERIES'''
+# @app.route("/get_invoice/<_id>", methods=["GET"])
+# @cross_origin(support_credentials=True)
+# def get_invoice(_id):
+#     try:
+#         if "token" not in request.headers:
+#             return jsonify("no token in the header")
+#         else:
+#             #print(request.headers["token"])
+#             try:
+#                 profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
 
+#                 print(profile)
+
+#             except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+#                 return jsonify("Token Error")
+#             columns = []
+#             postgres_invoice_query = f'SELECT * FROM "Invoice"."Invoices" WHERE "invoiceID" =  {_id}'
+#             cur.execute(postgres_invoice_query)
+#             row = cur.fetchone()
+#             cols = cur.description
+#             for col in cols:
+#                 columns.append(col[0])
+#             return jsonify(dict(zip(columns, row)))
+#     except Exception as e:
+#         return jsonify(e)
+
+@app.route("/create_job/", methods=["POST"])
+@cross_origin(support_credentials=True)
+def create_job():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            info = request.get_json()
+
+            postgres_create_job = f"""SELECT "jobID", clientID, description, dateStart, dateEnd, isCompleted FROM "Job"."Jobs" WHERE "jobID"={info["jobID"]};"""
+
+            cur.execute(postgres_create_job)
+
+            row = cur.fetchone()
+
+            print(row)
+
+            if row:
+
+                postgres_employee_update = """UPDATE "Job"."Jobs" SET "jobID"=%s, clientID=%s, description=%s, dateStart=%s, "dateEnd"=%s, "isCompleted"=%s WHERE "jobID" = %s;"""
+
+                cur.execute(postgres_employee_update,  (info["jobID"], info["clientID"], info["description"], info["dateStart"], info["dateEnd"],info["isCompleted"]))
+
+                conn.commit()
+
+                return jsonify(f"Job {info['jobID']} is updated")
+
+            else:
+
+                postgres_employee_query = """INSERT INTO "Job"."Jobs"("jobID", clientID, description, dateStart, dateEnd, "isCompleted") VALUES (%s, %s, %s, %s,%s, %s)"""
+
+                cur.execute(postgres_employee_query,
+                            (info["jobID"], info["clientID"], info["description"], info["dateStart"], info["dateEnd"], info["isCompleted"]))
+
+                conn.commit()
+
+                return jsonify("New job added")
+            
+            
+
+    except Exception as e:
+        return jsonify(e)    
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5020, debug=True)

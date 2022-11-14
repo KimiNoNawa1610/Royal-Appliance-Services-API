@@ -45,6 +45,586 @@ json = {"amount_due","rows":[{"item":"name","description":"something","rate":"pa
 "paid":,"due","note":(optional)}
 """
 
+@app.route("/get_employee_id/<_employee_name>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_employee_name(_employee_name):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+            
+            postgres_employee_name_search =f'''SELECT "employeeID" FROM "Employee"."Employees" WHERE name = '{_employee_name}';'''
+            cur.execute(postgres_employee_name_search)
+            row = cur.fetchone()
+
+            return jsonify({"employeeID":row[0]})
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_client_id/<_client_name>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_client_id(_client_name):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+            
+            postgres_client_name_search =f'''SELECT "clientID" FROM "Client"."Clients" WHERE name = '{_client_name}';'''
+            cur.execute(postgres_client_name_search)
+            row = cur.fetchone()
+
+            return jsonify({"clientID":row[0]})
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/add_client", methods=["POST"])
+@cross_origin(support_credentials=True)
+def add_client():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                try:
+                    profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                    print(profile)
+
+                except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                    return jsonify("Token Error")
+                info = request.get_json()
+
+                postgres_client_search = f"""SELECT "clientID", name, address, phone, notes FROM "Client"."Clients" WHERE name='{info["name"]}';"""
+
+                cur.execute(postgres_client_search)
+
+                row = cur.fetchone()
+
+                print(row)
+
+                if row:
+
+                    postgres_client_update = """UPDATE "Client"."Clients" SET name=%s, address=%s, phone=%s, notes=%s WHERE name =%s;"""
+
+                    cur.execute(postgres_client_update,  (info["name"], info["address"], info["phone"], info["notes"],info["name"]))
+
+                    conn.commit()
+
+                    return jsonify(f"Client {info['name']} is updated")
+
+                else:
+
+                    postgres_employee_query = """INSERT INTO "Client"."Clients"(name, address, phone, notes) VALUES (%s, %s, %s, %s)"""
+
+                    cur.execute(postgres_employee_query,(info["name"], info["address"], info["phone"], info["notes"]))
+
+                    conn.commit()
+
+                    return jsonify("New client added")
+
+            except Exception as e:
+                return jsonify(e)
+
+    except Exception as e:
+        return jsonify(e)
+
+#FIXED
+@app.route("/get_all_employees/", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_all_employees():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                try:
+                    profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                    print(profile)
+
+                except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                    return jsonify("Token Error")
+
+
+                postgres_employee_search = f"""SELECT * FROM "Employee"."Employees" WHERE email='{profile['email']}';"""
+
+                cur.execute(postgres_employee_search)
+
+                row = cur.fetchone()
+
+                if row:
+            
+                    columns = []
+                    out = []
+                    get_employees_query = f'SELECT * FROM "Employee"."Employees" ORDER BY "employeeID" ASC'
+                    cur.execute(get_employees_query)
+                    row = cur.fetchall()
+                    cols = cur.description
+                    for col in cols:
+                        columns.append(col[0])
+                    for ele in row:
+                        out.append(dict(zip(columns, ele)))
+                    return jsonify(out)
+
+                else:
+                    return jsonify("incorrect token")
+
+            except Exception as e:
+                return jsonify(e)
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_all_clients/", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_all_clients():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                try:
+                    profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                    print(profile)
+
+                except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                    return jsonify("Token Error")
+
+            
+                columns = []
+                out = []
+                get_employees_query = f'SELECT * FROM "Client"."Clients" ORDER BY "clientID" ASC'
+                cur.execute(get_employees_query)
+                row = cur.fetchall()
+                cols = cur.description
+                for col in cols:
+                    columns.append(col[0])
+                for ele in row:
+                    out.append(dict(zip(columns, ele)))
+                return jsonify(out)
+
+
+
+            except Exception as e:
+                return jsonify(e)
+
+    except Exception as e:
+        return jsonify(e)
+
+#FIXED
+@app.route("/get_employee/<_id>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_employee(_id):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            columns = []
+            get_employee_query = f'SELECT * FROM "Employee"."Employees" WHERE "employeeID" = {_id}'
+            cur.execute(get_employee_query)
+            row = cur.fetchone()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            return jsonify(dict(zip(columns, row)))
+
+    except Exception as e:
+        return jsonify(e)
+
+#FIXED
+@app.route("/add_employee/", methods=["POST"])
+@cross_origin(support_credentials=True)
+def add_employee():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            info = request.get_json()
+
+            postgres_employee_search = f"""SELECT "employeeID", name, email, password, "isAdmin" FROM "Employee"."Employees" WHERE "employeeID"={info["employeeID"]};"""
+
+            cur.execute(postgres_employee_search)
+
+            row = cur.fetchone()
+
+            print(row)
+
+            if row:
+
+                postgres_employee_update = """UPDATE "Employee"."Employees" SET name=%s, email=%s, password = crypt(%s, gen_salt('md5')), "isAdmin"=%s WHERE "employeeID" = %s;"""
+
+                cur.execute(postgres_employee_update,  (info["name"], info["email"], info["password"], info["isAdmin"],info["employeeID"]))
+
+                conn.commit()
+
+                return jsonify(f"Employee {info['name']} is updated")
+
+            else:
+
+                postgres_employee_query = """INSERT INTO "Employee"."Employees"(name, email, password, "isAdmin") VALUES (%s, %s, crypt(%s, gen_salt('md5')),%s)"""
+
+                cur.execute(postgres_employee_query,
+                            (info["name"], info["email"], info["password"], info["isAdmin"]))
+
+                conn.commit()
+
+                return jsonify("New employee added")
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_all_jobs/<_start_date>/<_end_date>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_all_jobs(_start_date,_end_date):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+                
+            columns = []
+            postgres_jobs_query = f'''SELECT "jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" WHERE "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
+            cur.execute(postgres_jobs_query)
+            rows = cur.fetchall()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            out = []
+            for row in rows:
+                out.append(dict(zip(columns, row)))
+            return jsonify(out)
+            
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_jobs/<_employee_id>/<_start_date>/<_end_date>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_jobs(_employee_id,_start_date,_end_date):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+            columns = []
+            postgres_jobs_query = f'''SELECT "EmployeeJobs"."employeeID","Jobs"."jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
+            cur.execute(postgres_jobs_query)
+            rows = cur.fetchall()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            out = []
+            for row in rows:
+                out.append(dict(zip(columns, row)))
+            return jsonify(out)
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/delete_jobs/<_start_date>/<_end_date>", methods=["POST"])
+@cross_origin(support_credentials=True)
+def delete_jobs(_start_date,_end_date):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            postgres_employee_query = f'''DELETE FROM "Job"."Jobs" WHERE  "dateStart" BETWEEN '{_start_date}' AND '{_end_date}' '''
+            cur.execute(postgres_employee_query)
+            conn.commit()
+            count = cur.rowcount
+            print(count)
+            return jsonify("JOB DELETED")
+
+    except Exception as e:
+        return jsonify(e)
+
+#Working
+@app.route("/assign_job/<_client_id>/<_employee_id>", methods=["POST"])
+@cross_origin(support_credentials=True)
+def assign_job(_client_id,_employee_id):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            content_type = request.headers.get('Content-Type')
+
+            if (content_type == 'application/json'):
+                #print("sad")
+                """
+                "clientID" bigint NOT NULL,description text COLLATE pg_catalog."default",
+                "dateStart" date,
+                "dateEnd" date,
+                """
+                info = request.get_json()
+
+                dateStart = info["dateStart"]
+                dateEnd = info["dateEnd"]
+                description = info["description"]
+                isCompleted = False
+
+                postgres_job_query = f'''INSERT INTO "Job"."Jobs" ("clientID", description, "dateStart", "dateEnd", "isCompleted") VALUES (%s, %s, %s, %s, %s) RETURNING "jobID";'''
+
+                cur.execute(postgres_job_query,(_client_id,description,dateStart,dateEnd,isCompleted))
+
+                conn.commit()
+
+                row = cur.fetchone()
+
+                print(row[0])
+
+                postgres_employee_job_query = f'''INSERT INTO "EmployeeJob"."EmployeeJobs" ("employeeID", "jobID") VALUES (%s, %s);'''
+
+                cur.execute(postgres_employee_job_query,(_employee_id,row[0]))
+
+                conn.commit()
+
+                return jsonify("Job Added")
+
+
+            else:
+                return jsonify("Please include a JSON body")
+
+    except Exception as e:
+        return jsonify(e)
+
+#Fixed
+@app.route("/delete_employee/<_id>", methods=["POST"])
+@cross_origin(support_credentials=True)
+def delete_employee(_id):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            postgres_employee_query = f'DELETE FROM "Employee"."Employees" WHERE "employeeID" = {_id}'
+            cur.execute(postgres_employee_query)
+            conn.commit()
+            count = cur.rowcount
+            print(count)
+            return jsonify("EMPLOYEE DELETED")
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/authentication/", methods=["POST", "OPTIONS"])
+@cross_origin(support_credentials=True)
+def get_authentication():
+    print(request.method)
+
+    try:
+        print(request)
+        info = request.get_json()
+
+        email = info["email"]
+
+        password = info["password"]
+
+        postgres_invoice_query = 'SELECT * FROM "Employee"."Employees" WHERE email = %s AND password = crypt(%s, password)'
+
+        cur.execute(postgres_invoice_query, (email, password))
+
+        result = cur.fetchone()
+
+        if result:
+            print("verified")
+            out = {"name": None, "email": None, "isAdmin": None, "token": None}
+            token = jwt.encode(payload=info, key=app_conf.get("key", "secret_key"), algorithm="HS256")
+            out["name"] = result[1]
+            out["email"] = result[2]
+            out["isAdmin"] = result[4]
+            out["token"] = token
+            return jsonify(out)
+        else:
+            return jsonify(False)
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/connection_test", methods=["GET", "POST"])
+@cross_origin(support_credentials=True)
+def connection_test():
+    return jsonify("Rest API is running")
+
+
+
+
+
+#NEED TO MODIFIED LATER
+@app.route("/get_all_invoices/", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_all_invoices():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            columns = []
+            out = []
+            postgres_invoice_query = f'SELECT * FROM "Invoice"."Invoices"'
+            cur.execute(postgres_invoice_query)
+            row = cur.fetchall()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            for ele in row:
+                out.append(dict(zip(columns, ele)))
+            return jsonify(out)
+    except Exception as e:
+        return jsonify(e)
+
+#FIXED
+@app.route("/delete_invoice/<_id>", methods=["POST"])
+@cross_origin(support_credentials=True)
+def delete_invoice(_id):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                    return jsonify("Token Error")
+
+            file_path1 = f"internal_invoices\\invoice_{_id}.pdf"
+            file_path2 = f"client_invoices\\invoice_{_id}.pdf"
+            postgres_invoice_query = f'DELETE FROM "Invoice"."Invoices" WHERE "Invoices"."invoiceID" = {_id}'
+            cur.execute(postgres_invoice_query)
+            conn.commit()
+            count = cur.rowcount
+            os.remove(file_path1)
+            os.remove(file_path2)
+            print(count)
+            return jsonify("INVOICE DELETED")
+    except Exception as e:
+        return jsonify(e)
+
+#FIXED
+@app.route("/download_invoice/<_folder>/<_id>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def download_invoice(_folder, _id):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            if _folder == "internal":
+                file_path = f"internal_invoices\\invoice_{_id}.pdf"
+            else:
+                file_path = f"client_invoices\\invoice_{_id}.pdf"
+            print(file_path)
+            if os.path.exists(file_path):
+                return send_file(file_path, as_attachment=True)
+            else:
+                return jsonify("Invoice with that id does not exist")
+    except Exception as e:
+        return jsonify(e)
 
 @app.route("/generate_invoice", methods=["POST"])
 @cross_origin(support_credentials=True)
@@ -335,377 +915,6 @@ def get_invoice(_id):
         return jsonify(e)
 
 #FIXED
-@app.route("/get_all_employees/", methods=["GET"])
-@cross_origin(support_credentials=True)
-def get_all_employees():
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            try:
-                try:
-                    profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                    print(profile)
-
-                except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                    return jsonify("Token Error")
-
-
-                postgres_employee_search = f"""SELECT * FROM "Employee"."Employees" WHERE email='{profile['email']}';"""
-
-                cur.execute(postgres_employee_search)
-
-                row = cur.fetchone()
-
-                if row:
-            
-                    columns = []
-                    out = []
-                    get_employees_query = f'SELECT * FROM "Employee"."Employees" ORDER BY "employeeID" ASC'
-                    cur.execute(get_employees_query)
-                    row = cur.fetchall()
-                    cols = cur.description
-                    for col in cols:
-                        columns.append(col[0])
-                    for ele in row:
-                        out.append(dict(zip(columns, ele)))
-                    return jsonify(out)
-
-                else:
-                    return jsonify("incorrect token")
-
-            except Exception as e:
-                return jsonify(e)
-
-    except Exception as e:
-        return jsonify(e)
-
-#FIXED
-@app.route("/get_employee/<_id>", methods=["GET"])
-@cross_origin(support_credentials=True)
-def get_employee(_id):
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                return jsonify("Token Error")
-
-            columns = []
-            get_employee_query = f'SELECT * FROM "Employee"."Employees" WHERE "employeeID" = {_id}'
-            cur.execute(get_employee_query)
-            row = cur.fetchone()
-            cols = cur.description
-            for col in cols:
-                columns.append(col[0])
-            return jsonify(dict(zip(columns, row)))
-
-    except Exception as e:
-        return jsonify(e)
-
-#FIXED
-@app.route("/add_employee/", methods=["POST"])
-@cross_origin(support_credentials=True)
-def add_employee():
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                return jsonify("Token Error")
-
-            info = request.get_json()
-
-            postgres_employee_search = f"""SELECT "employeeID", name, email, password, "isAdmin" FROM "Employee"."Employees" WHERE "employeeID"={info["employeeID"]};"""
-
-            cur.execute(postgres_employee_search)
-
-            row = cur.fetchone()
-
-            print(row)
-
-            if row:
-
-                postgres_employee_update = """UPDATE "Employee"."Employees" SET "employeeID"=%s, name=%s, email=%s, password=%s, "isAdmin"=%s WHERE "employeeID" = %s;"""
-
-                cur.execute(postgres_employee_update,  (info["employeeID"], info["name"], info["email"], info["password"], info["isAdmin"],info["employeeID"]))
-
-                conn.commit()
-
-                return jsonify(f"Employee {info['name']} is updated")
-
-            else:
-
-                postgres_employee_query = """INSERT INTO "Employee"."Employees"("employeeID", name, email, password, "isAdmin") VALUES (%s, %s, %s, crypt(%s, gen_salt('md5')),%s)"""
-
-                cur.execute(postgres_employee_query,
-                            (info["employeeID"], info["name"], info["email"], info["password"], info["isAdmin"]))
-
-                conn.commit()
-
-                return jsonify("New employee added")
-
-    except Exception as e:
-        return jsonify(e)
-
-@app.route("/get_all_jobs/", methods=["GET"])
-@cross_origin(support_credentials=True)
-def get_all_jobs():
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                return jsonify("Token Error")
-                
-            columns = []
-            postgres_jobs_query = f'SELECT "jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs";'
-            cur.execute(postgres_jobs_query)
-            rows = cur.fetchall()
-            cols = cur.description
-            for col in cols:
-                columns.append(col[0])
-            out = []
-            for row in rows:
-                out.append(dict(zip(columns, row)))
-            return jsonify(out)
-            
-    except Exception as e:
-        return jsonify(e)
-
-@app.route("/get_jobs/<_employee_id>/<_start_date>/<_end_date>", methods=["GET"])
-@cross_origin(support_credentials=True)
-def get_jobs(_employee_id,_start_date,_end_date):
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                return jsonify("Token Error")
-            columns = []
-            postgres_jobs_query = f'''SELECT "EmployeeJobs"."employeeID","Jobs"."jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
-            cur.execute(postgres_jobs_query)
-            rows = cur.fetchall()
-            cols = cur.description
-            for col in cols:
-                columns.append(col[0])
-            out = []
-            for row in rows:
-                out.append(dict(zip(columns, row)))
-            return jsonify(out)
-
-    except Exception as e:
-        return jsonify(e)
-
-#Working
-@app.route("/assign_job/<_client_id>/<_employee_id>", methods=["GET"])
-@cross_origin(support_credentials=True)
-def assign_job(_client_id,_employee_id):
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                return jsonify("Token Error")
-
-    except Exception as e:
-        return jsonify(e)
-#Fixed
-@app.route("/delete_employee/<_id>", methods=["POST"])
-@cross_origin(support_credentials=True)
-def delete_employee(_id):
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                return jsonify("Token Error")
-
-            postgres_employee_query = f'DELETE FROM "Employee"."Employees" WHERE "employeeID" = {_id}'
-            cur.execute(postgres_employee_query)
-            conn.commit()
-            count = cur.rowcount
-            print(count)
-            return jsonify("EMPLOYEE DELETED")
-
-    except Exception as e:
-        return jsonify(e)
-
-
-@app.route("/authentication/", methods=["POST", "OPTIONS"])
-@cross_origin(support_credentials=True)
-def get_authentication():
-    print(request.method)
-
-    try:
-        print(request)
-        info = request.get_json()
-
-        email = info["email"]
-
-        password = info["password"]
-
-        postgres_invoice_query = 'SELECT * FROM "Employee"."Employees" WHERE email = %s AND password = crypt(%s, password)'
-
-        cur.execute(postgres_invoice_query, (email, password))
-
-        result = cur.fetchone()
-
-        if result:
-            print("verified")
-            out = {"name": None, "email": None, "isAdmin": None, "token": None}
-            token = jwt.encode(payload=info, key=app_conf.get("key", "secret_key"), algorithm="HS256")
-            out["name"] = result[1]
-            out["email"] = result[2]
-            out["isAdmin"] = result[4]
-            out["token"] = token
-            return jsonify(out)
-        else:
-            return jsonify(False)
-
-    except Exception as e:
-        return jsonify(e)
-
-#FIXED
-@app.route("/get_all_invoices/", methods=["GET"])
-@cross_origin(support_credentials=True)
-def get_all_invoices():
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                return jsonify("Token Error")
-
-            columns = []
-            out = []
-            postgres_invoice_query = f'SELECT * FROM "Invoice"."Invoices"'
-            cur.execute(postgres_invoice_query)
-            row = cur.fetchall()
-            cols = cur.description
-            for col in cols:
-                columns.append(col[0])
-            for ele in row:
-                out.append(dict(zip(columns, ele)))
-            return jsonify(out)
-    except Exception as e:
-        return jsonify(e)
-
-#FIXED
-@app.route("/delete_invoice/<_id>", methods=["POST"])
-@cross_origin(support_credentials=True)
-def delete_invoice(_id):
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                    return jsonify("Token Error")
-
-            file_path1 = f"internal_invoices\\invoice_{_id}.pdf"
-            file_path2 = f"client_invoices\\invoice_{_id}.pdf"
-            postgres_invoice_query = f'DELETE FROM "Invoice"."Invoices" WHERE "Invoices"."invoiceID" = {_id}'
-            cur.execute(postgres_invoice_query)
-            conn.commit()
-            count = cur.rowcount
-            os.remove(file_path1)
-            os.remove(file_path2)
-            print(count)
-            return jsonify("INVOICE DELETED")
-    except Exception as e:
-        return jsonify(e)
-
-#FIXED
-@app.route("/download_invoice/<_folder>/<_id>", methods=["GET"])
-@cross_origin(support_credentials=True)
-def download_invoice(_folder, _id):
-    try:
-        if "token" not in request.headers:
-            return jsonify("no token in the header")
-        else:
-            #print(request.headers["token"])
-            try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
-
-                print(profile)
-
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
-                return jsonify("Token Error")
-
-            if _folder == "internal":
-                file_path = f"internal_invoices\\invoice_{_id}.pdf"
-            else:
-                file_path = f"client_invoices\\invoice_{_id}.pdf"
-            print(file_path)
-            if os.path.exists(file_path):
-                return send_file(file_path, as_attachment=True)
-            else:
-                return jsonify("Invoice with that id does not exist")
-    except Exception as e:
-        return jsonify(e)
-
-
-@app.route("/connection_test", methods=["GET", "POST"])
-@cross_origin(support_credentials=True)
-def connection_test():
-    return jsonify("Rest API is running")
-
-#FIXED
 @app.route("/get_invoice_test", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_invoice_test():
@@ -847,6 +1056,8 @@ def create_job():
             
 
     except Exception as e:
-        return jsonify(e)    
+        return jsonify(e) 
+
+#running driver   
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5020, debug=True)

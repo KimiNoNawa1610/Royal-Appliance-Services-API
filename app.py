@@ -533,11 +533,9 @@ def connection_test():
 
 
 
-<<<<<<< Updated upstream
-=======
 
 
->>>>>>> Stashed changes
+
 #NEED TO MODIFIED LATER
 @app.route("/get_all_invoices/", methods=["GET"])
 @cross_origin(support_credentials=True)

@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 import psycopg2
 import jwt
+from waitress import serve
 
 app = Flask(__name__)
 cors = CORS(app, support_credentials=True)
@@ -214,10 +215,10 @@ def get_all_clients():
                 except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
                     return jsonify("Token Error")
 
-            
                 columns = []
                 out = []
                 get_employees_query = f'SELECT * FROM "Client"."Clients" ORDER BY "clientID" ASC'
+                print(get_employees_query)
                 cur.execute(get_employees_query)
                 row = cur.fetchall()
                 cols = cur.description
@@ -226,8 +227,6 @@ def get_all_clients():
                 for ele in row:
                     out.append(dict(zip(columns, ele)))
                 return jsonify(out)
-
-
 
             except Exception as e:
                 return jsonify(e)
@@ -284,7 +283,7 @@ def add_employee():
 
             info = request.get_json()
 
-            postgres_employee_search = f"""SELECT "employeeID", name, email, password, "isAdmin" FROM "Employee"."Employees" WHERE "employeeID"={info["employeeID"]};"""
+            postgres_employee_search = f"""SELECT name, email, password, "isAdmin" FROM "Employee"."Employees" WHERE email='{info["email"]}';"""
 
             cur.execute(postgres_employee_search)
 
@@ -294,9 +293,9 @@ def add_employee():
 
             if row:
 
-                postgres_employee_update = """UPDATE "Employee"."Employees" SET name=%s, email=%s, password = crypt(%s, gen_salt('md5')), "isAdmin"=%s WHERE "employeeID" = %s;"""
+                postgres_employee_update = """UPDATE "Employee"."Employees" SET name=%s, email=%s, password = crypt(%s, gen_salt('md5')), "isAdmin"=%s WHERE email = %s;"""
 
-                cur.execute(postgres_employee_update,  (info["name"], info["email"], info["password"], info["isAdmin"],info["employeeID"]))
+                cur.execute(postgres_employee_update,  (info["name"], info["email"], info["password"], info["isAdmin"],info["email"]))
 
                 conn.commit()
 
@@ -429,7 +428,7 @@ def assign_job(_client_id,_employee_id):
             if (content_type == 'application/json'):
                 #print("sad")
                 """
-                "clientID" bigint NOT NULL,description text COLLATE pg_catalog."default",
+                "description" text,
                 "dateStart" date,
                 "dateEnd" date,
                 """
@@ -447,8 +446,6 @@ def assign_job(_client_id,_employee_id):
                 conn.commit()
 
                 row = cur.fetchone()
-
-                print(row[0])
 
                 postgres_employee_job_query = f'''INSERT INTO "EmployeeJob"."EmployeeJobs" ("employeeID", "jobID") VALUES (%s, %s);'''
 
@@ -536,6 +533,11 @@ def connection_test():
 
 
 
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes
 #NEED TO MODIFIED LATER
 @app.route("/get_all_invoices/", methods=["GET"])
 @cross_origin(support_credentials=True)
@@ -1060,4 +1062,5 @@ def create_job():
 
 #running driver   
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5020, debug=True)
+    #app.run(host="0.0.0.0", port=5020, debug=True)
+    serve(app,host="0.0.0.0", port=5020)

@@ -532,10 +532,6 @@ def get_authentication():
 def connection_test():
     return jsonify("Rest API is running")
 
-
-
-
-
 #NEED TO MODIFIED LATER
 @app.route("/get_all_invoices/", methods=["GET"])
 @cross_origin(support_credentials=True)
@@ -1052,8 +1048,6 @@ def create_job():
                 conn.commit()
 
                 return jsonify("New job added")
-            
-            
 
     except Exception as e:
         return jsonify(e) 

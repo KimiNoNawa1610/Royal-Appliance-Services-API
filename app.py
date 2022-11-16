@@ -116,7 +116,7 @@ def add_client():
                     return jsonify("Token Error")
                 info = request.get_json()
 
-                postgres_client_search = f"""SELECT "clientID", name, address, phone, notes FROM "Client"."Clients" WHERE name='{info["name"]}';"""
+                postgres_client_search = f"""SELECT "clientID" FROM "Client"."Clients" WHERE name='{info["name"]}' OR address='{info["address"]}' OR phone ='{info["phone"]}';"""
 
                 cur.execute(postgres_client_search)
 
@@ -126,9 +126,9 @@ def add_client():
 
                 if row:
 
-                    postgres_client_update = """UPDATE "Client"."Clients" SET name=%s, address=%s, phone=%s, notes=%s WHERE name =%s;"""
+                    postgres_client_update = """UPDATE "Client"."Clients" SET name=%s, address=%s, phone=%s, notes=%s, email=%s WHERE "clientID" = %s;"""
 
-                    cur.execute(postgres_client_update,  (info["name"], info["address"], info["phone"], info["notes"],info["name"]))
+                    cur.execute(postgres_client_update,  (info["name"], info["address"], info["phone"], info["notes"],info["email"],row[0]))
 
                     conn.commit()
 
@@ -136,14 +136,45 @@ def add_client():
 
                 else:
 
-                    postgres_employee_query = """INSERT INTO "Client"."Clients"(name, address, phone, notes) VALUES (%s, %s, %s, %s)"""
+                    postgres_employee_query = """INSERT INTO "Client"."Clients"(name, address, phone, notes, email) VALUES (%s, %s, %s, %s, %s)"""
 
-                    cur.execute(postgres_employee_query,(info["name"], info["address"], info["phone"], info["notes"]))
+                    cur.execute(postgres_employee_query,(info["name"], info["address"], info["phone"], info["notes"],info["email"]))
 
                     conn.commit()
 
-                    return jsonify("New client added")
+                    return jsonify("New Client Added")
 
+            except Exception as e:
+                return jsonify(e)
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/job_is_finished/<_job_id>", methods=["POST"])
+@cross_origin(support_credentials=True)
+def job_is_finished(_job_id):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            try:
+                try:
+                    profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                    print(profile)
+
+                except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                    return jsonify("Token Error")
+
+                set_job_finish = """UPDATE "Job"."Jobs" SET "isCompleted"= %s WHERE "jobID"= %s;"""
+                
+                cur.execute(set_job_finish, (True,_job_id))
+
+                conn.commit()
+
+                return jsonify("JOB IS FINISHED")
+            
             except Exception as e:
                 return jsonify(e)
 
@@ -283,7 +314,7 @@ def add_employee():
 
             info = request.get_json()
 
-            postgres_employee_search = f"""SELECT name, email, password, "isAdmin" FROM "Employee"."Employees" WHERE email='{info["email"]}';"""
+            postgres_employee_search = f"""SELECT "employeeID" FROM "Employee"."Employees" WHERE email='{info["email"]}' OR name='{info["name"]}';"""
 
             cur.execute(postgres_employee_search)
 
@@ -293,9 +324,9 @@ def add_employee():
 
             if row:
 
-                postgres_employee_update = """UPDATE "Employee"."Employees" SET name=%s, email=%s, password = crypt(%s, gen_salt('md5')), "isAdmin"=%s WHERE email = %s;"""
+                postgres_employee_update = """UPDATE "Employee"."Employees" SET name=%s, email=%s, password = crypt(%s, gen_salt('md5')), "isAdmin"=%s WHERE "employeeID" = %s;"""
 
-                cur.execute(postgres_employee_update,  (info["name"], info["email"], info["password"], info["isAdmin"],info["email"]))
+                cur.execute(postgres_employee_update,  (info["name"], info["email"], info["password"], info["isAdmin"],row[0]))
 
                 conn.commit()
 
@@ -343,7 +374,6 @@ def get_all_jobs(_start_date,_end_date):
             for row in rows:
                 out.append(dict(zip(columns, row)))
             return jsonify(out)
-            
     except Exception as e:
         return jsonify(e)
 
@@ -364,7 +394,9 @@ def get_jobs(_employee_id,_start_date,_end_date):
             except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
                 return jsonify("Token Error")
             columns = []
-            postgres_jobs_query = f'''SELECT "EmployeeJobs"."employeeID","Jobs"."jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
+            postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" 
+INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID"
+INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
             cur.execute(postgres_jobs_query)
             rows = cur.fetchall()
             cols = cur.description
@@ -1060,5 +1092,5 @@ def create_job():
 
 #running driver   
 if __name__ == '__main__':
-    #app.run(host="0.0.0.0", port=5020, debug=True)
-    serve(app,host="0.0.0.0", port=5020)
+    app.run(host="0.0.0.0", port=5020, debug=True)
+    #serve(app,host="0.0.0.0", port=5020)

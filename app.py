@@ -396,7 +396,7 @@ def get_jobs(_employee_id,_start_date,_end_date):
             columns = []
             postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" 
 INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID"
-INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
+INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}' AND "isCompleted"=false;'''
             cur.execute(postgres_jobs_query)
             rows = cur.fetchall()
             cols = cur.description
@@ -1089,6 +1089,39 @@ def create_job():
 
     except Exception as e:
         return jsonify(e) 
+
+#Test Query
+@app.route("/get_all_jobs_withoutdate", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_all_jobs_withoutdate():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            #print(request.headers["token"])
+            
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+                
+            columns = []
+            postgres_jobs_query = f'''SELECT "jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs";'''
+            cur.execute(postgres_jobs_query)
+            rows = cur.fetchall()
+            cols = cur.description
+            for col in cols:
+                columns.append(col[0])
+            out = []
+            for row in rows:
+                out.append(dict(zip(columns, row)))
+            return jsonify(out)
+    except Exception as e:
+        return jsonify(e)
+
 
 #running driver   
 if __name__ == '__main__':

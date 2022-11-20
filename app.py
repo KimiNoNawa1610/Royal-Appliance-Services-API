@@ -150,9 +150,9 @@ def add_client():
     except Exception as e:
         return jsonify(e)
 
-@app.route("/job_is_finished/<_job_id>", methods=["POST"])
+@app.route("/job_is_finished/<_job_id>/<_completed>", methods=["POST"])
 @cross_origin(support_credentials=True)
-def job_is_finished(_job_id):
+def job_is_finished(_job_id,_completed):
     try:
         if "token" not in request.headers:
             return jsonify("no token in the header")
@@ -169,7 +169,7 @@ def job_is_finished(_job_id):
 
                 set_job_finish = """UPDATE "Job"."Jobs" SET "isCompleted"= %s WHERE "jobID"= %s;"""
                 
-                cur.execute(set_job_finish, (True,_job_id))
+                cur.execute(set_job_finish, (_completed,_job_id))
 
                 conn.commit()
 
@@ -377,9 +377,9 @@ def get_all_jobs(_start_date,_end_date):
     except Exception as e:
         return jsonify(e)
 
-@app.route("/get_jobs/<_employee_id>/<_start_date>/<_end_date>", methods=["GET"])
+@app.route("/get_jobs/<_employee_id>/<_start_date>/<_end_date>/<_completed>", methods=["GET"])
 @cross_origin(support_credentials=True)
-def get_jobs(_employee_id,_start_date,_end_date):
+def get_jobs(_employee_id,_start_date,_end_date,_completed):
     try:
         if "token" not in request.headers:
             return jsonify("no token in the header")
@@ -394,9 +394,16 @@ def get_jobs(_employee_id,_start_date,_end_date):
             except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
                 return jsonify("Token Error")
             columns = []
-            postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" 
+
+            if not _completed or _completed =="None":
+                postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" 
 INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID"
-INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}' AND "isCompleted"=false;'''
+INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
+           
+            else:
+                postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" 
+    INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID"
+    INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}' AND "isCompleted"={_completed};'''
             cur.execute(postgres_jobs_query)
             rows = cur.fetchall()
             cols = cur.description

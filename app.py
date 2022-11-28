@@ -421,12 +421,12 @@ def get_jobs(_employee_id, _start_date, _end_date, _completed):
             columns = []
 
             if not _completed or _completed == "None":
-                postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" 
+                postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs"
 INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID"
 INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}';'''
 
             else:
-                postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs" 
+                postgres_jobs_query = f'''SELECT "Jobs"."jobID","Clients"."address","Clients"."name", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs"
     INNER JOIN "EmployeeJob"."EmployeeJobs" ON "Jobs"."jobID" = "EmployeeJobs"."jobID"
     INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "EmployeeJobs"."employeeID" = {_employee_id} AND "dateStart" BETWEEN '{_start_date}' AND '{_end_date}' AND "isCompleted"={_completed};'''
             cur.execute(postgres_jobs_query)
@@ -619,7 +619,6 @@ def generate_tech_income_sheet(_employee_id, invoice_id):
                 conn.commit()
 
                 return jsonify("Add New Income Sheet")
-                
 
     except Exception as ex:
         return jsonify(ex)
@@ -643,16 +642,17 @@ def get_tech_income_sheet(_employee_id, day_start, day_end):
             except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError, json.decoder.JSONDecodeError) as e:
                 return jsonify("Token Error")
 
-            get_income_query = '''SELECT "EmployeeInvoices"."employeeID", "EmployeeInvoices"."invoiceID", "TechIncome".net, 
+            get_income_query = '''SELECT "EmployeeInvoices"."employeeID", "EmployeeInvoices"."invoiceID", "TechIncome".net,
     "TechIncome".total, "TechIncome".datecreated, "TechIncome".labor,"TechIncome".my_part,
-	"TechIncome".part_installed, "TechIncome".tax,"TechIncome".shipping, "TechIncome".client_sell, 
-	"TechIncome".paid_by  
-	FROM "EmployeeInvoice"."EmployeeInvoices" 
-	INNER JOIN "Invoice"."TechIncome" 
+	"TechIncome".part_installed, "TechIncome".tax,"TechIncome".shipping, "TechIncome".client_sell,
+	"TechIncome".paid_by
+	FROM "EmployeeInvoice"."EmployeeInvoices"
+	INNER JOIN "Invoice"."TechIncome"
 	ON "TechIncome"."invoiceID" = "EmployeeInvoices"."invoiceID"
 	WHERE "employeeID" = %s AND "TechIncome".datecreated BETWEEN %s AND %s ORDER BY "TechIncome".datecreated DESC;'''
 
-            cur.execute(get_income_query, (int(_employee_id),day_start,day_end))
+            cur.execute(get_income_query,
+                        (int(_employee_id), day_start, day_end))
 
             columns = []
             rows = cur.fetchall()
@@ -667,6 +667,7 @@ def get_tech_income_sheet(_employee_id, day_start, day_end):
     except Exception as e:
         return jsonify(e)
 
+
 @app.route("/get_all_jobs_withoutdate", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_all_jobs_withoutdate():
@@ -674,16 +675,17 @@ def get_all_jobs_withoutdate():
         if "token" not in request.headers:
             return jsonify("no token in the header")
         else:
-            #print(request.headers["token"])
-            
+            # print(request.headers["token"])
+
             try:
-                profile = jwt.decode(request.headers["token"], key=app_conf.get("key", "secret_key"), algorithms=["HS256"])
+                profile = jwt.decode(request.headers["token"], key=app_conf.get(
+                    "key", "secret_key"), algorithms=["HS256"])
 
                 print(profile)
 
-            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError,json.decoder.JSONDecodeError) as e:
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError, json.decoder.JSONDecodeError) as e:
                 return jsonify("Token Error")
-                
+
             columns = []
             postgres_jobs_query = f'''SELECT "jobID", "clientID", description, "dateStart", "dateEnd", "isCompleted" FROM "Job"."Jobs";'''
             cur.execute(postgres_jobs_query)
@@ -698,6 +700,416 @@ def get_all_jobs_withoutdate():
     except Exception as e:
         return jsonify(e)
 
+
+@app.route("/generate_invoice", methods=["POST"])
+@cross_origin(support_credentials=True)
+def generate_invoice():
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            # print(request.headers["token"])
+
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get(
+                    "key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+
+            except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, jwt.DecodeError, json.decoder.JSONDecodeError) as e:
+                return jsonify("Token Error")
+
+            if not request.get_json():
+
+                return jsonify("Please include income information")
+
+            else:
+                """
+                Object {
+                    "all_work_cod": "54",
+                    "authorization_number": "3584",
+                    "balance_due": "87884",
+                    "card_number": "575",
+                    "card_type": "Visa",
+                    "city": "Long Beach",
+                    "customer_complaint": "Complaining ",
+                    "customer_name": "Name",
+                    "cvc": "67548",
+                    "date": "10/11/2022",
+                    "deposit": "678",
+                    "email_address": "email@email.com",
+                    "exp_date": "6754",
+                    "invoice_number": 5546888,
+                    "item_to_be_serviced": "warranty",
+                    "job_estimate": "10.78",
+                    "labor": "491",
+                    "labor_warranty": "Warranty",
+                    "make": "makehsvd",
+                    "material_costs": "10.75",
+                    "material_warranty": "warranty",
+                    "model_no": "kahevjd",
+                    "part_rows": Array [
+                        Object {
+                        "cost": "0",
+                        "quantity": "3",
+                        "part_material": "kahrb",
+                        },
+                        Object {
+                        "cost": "0",
+                        "quantity": "3",
+                        "part_material": "sheba",
+                        },
+                        Object {
+                        "cost": "0",
+                        "quantity": "3",
+                        "part_material": "bdvdb",
+                        },
+                        Object {
+                        "cost": "0",
+                        "quantity": "3",
+                        "part_material": "ndhdb",
+                        },
+                        Object {
+                        "cost": "0",
+                        "quantity": "3",
+                        "part_material": "bch be",
+                        },
+                        Object {
+                        "cost": "0",
+                        "quantity": "3",
+                        "part_material": "jahvrbxjdu ",
+                        },
+                        Object {
+                        "cost": "0",
+                        "quantity": "3",
+                        "part_material": "jshbrb",
+                        },
+                    ],
+                    "phone": "5484",
+                    "pick_up_delivery": "9484",
+                    "serial_no": "msnbf",
+                    "service_call": "64",
+                    "street": "S Daisy",
+                    "tax": "10",
+                    "tech_name": "Geo",
+                    "tech_report": "nah f",
+                    "work_order_number": "6542884",
+                    "Signature": ”client name”
+                    }
+                """
+
+                info = request.get_json()
+
+                #print(info)
+
+                html_string = ""
+
+                with open('templates\invoices.html', "r") as f:
+                    html_string = f.read()
+
+                html_string = html_string.replace(
+                    "{invoice_number}", str(info["invoice_number"])).replace(
+                    "{customer}", str(info["customer_name"])).replace(
+                    "{date}", str(info["date"])).replace(
+                    "{phone}", str(info["phone"])).replace(
+                    "{street}", str(info["street"])).replace(
+                    "{city}", str(info["city"])).replace(
+                    "{labor_warranty}", str(info["labor_warranty"])).replace(
+                    "{material_warranty}", str(info["material_warranty"])).replace(
+                    "{item_service}", str(info["item_to_be_serviced"])).replace(
+                    "{make}", str(info["make"])).replace(
+                    "{model}", str(info["model_no"])).replace(
+                    "{serial}", str(info["serial_no"])).replace(
+                    "{customer_complaint}", str(info["customer_complaint"])).replace(
+                    "{email}", str(info["email_address"])).replace(
+                    "{work_order}", str(info["work_order_number"])).replace(
+                    "{authorization}", str(info["authorization_number"])).replace(
+                    "{job_estimate}", str(info["job_estimate"])).replace(
+                    "{tech_name}", str(info["tech_name"])).replace(
+                    "{material}", str(info["material_costs"])).replace(
+                    "{tax}", str(info["tax"])).replace(
+                    "{service_call}", str(info["service_call"])).replace(
+                    "{labor}", str(info["labor"])).replace(
+                    "{deposit}", str(info["deposit"])).replace(
+                    "{delivery}", str(info["pick_up_delivery"])).replace(
+                    "{cod}", str(info["all_work_cod"])).replace(
+                    "{balance_due}", str(info["balance_due"])).replace(
+                    "{report}", str(info["tech_report"])).replace(
+                    "{card_number}", str(info["card_number"])).replace(
+                    "{exp_date}", str(info["exp_date"])).replace(
+                    "{cvc}", str(info["cvc"]))
+
+                parts = list(filter(None, info["part_rows"]))
+
+                print(parts)
+
+                while len(parts) < 7:
+                    parts.append(
+                        {"cost": "", "quantity": "", "part_material": ""})
+
+                for i in range(len(parts)):
+                    html_string = html_string.replace(
+                        "{q"+str(i)+"}", parts[i]["quantity"]).replace(
+                        "{p"+str(i)+"}", parts[i]["part_material"]).replace(
+                        "{c"+str(i)+"}", parts[i]["cost"])
+
+                is_signed = False
+
+                signature = ""
+
+                if "signature" in info:
+
+                    html_string = html_string.replace(
+                        "{signature}", info["signature"])
+
+                    signature = info["signature"]
+
+                    is_signed = True
+
+                else:
+
+                    html_string = html_string.replace(
+                        "{signature}", " Not Signed Yet")
+
+                if info["card_type"] == "Visa":
+                    html_string = html_string.replace("{visa}", "checked")
+                elif info["card_type"] == "Mastercard":
+                    html_string = html_string.replace("{mc}", "#checked")
+                elif info["card_type"] == "AMEX":
+                    html_string = html_string.replace("{amex}", "#checked")
+                elif info["card_type"] == "Discover":
+                    html_string = html_string.replace("{disc}", "#checked")
+
+                with open(f'templates\invoices_{info["invoice_number"]}.html', "w") as wf:
+                    wf.write(html_string)
+
+                with open(f'internal_invoices\invoice_{info["invoice_number"]}.pdf', 'w') as outf:
+                    outf.write("")
+
+                try:
+
+                    pdf.from_file(f'templates\invoices_{info["invoice_number"]}.html',
+                                  f'internal_invoices\invoice_{info["invoice_number"]}.pdf')
+
+                except Exception as ex:
+                    print(ex)
+
+                invoice_insert_query = """INSERT INTO "Invoice"."ClientInvoice"(
+	"invoiceID", customer, created_date, phone, street, city, labor_warranty, material_warranty, serviced_item, make, model, serial_number, customer_complaint, email, work_order, auth_num, job_est, tech_name, q_table, tech_report, check_type, card_number, exp_date, cvc, is_signed, signature)
+	VALUES (%s, PGP_SYM_ENCRYPT(%s, 'AES_KEY'), %s, PGP_SYM_ENCRYPT(%s, 'AES_KEY'), PGP_SYM_ENCRYPT(%s, 'AES_KEY'), PGP_SYM_ENCRYPT(%s, 'AES_KEY'), %s, %s, %s, %s, %s, %s, %s, PGP_SYM_ENCRYPT(%s, 'AES_KEY'), PGP_SYM_ENCRYPT(%s, 'AES_KEY'), PGP_SYM_ENCRYPT(%s, 'AES_KEY'), %s, PGP_SYM_ENCRYPT(%s, 'AES_KEY'), %s, %s, %s, PGP_SYM_ENCRYPT(%s, 'AES_KEY'), PGP_SYM_ENCRYPT(%s, 'AES_KEY'), PGP_SYM_ENCRYPT(%s, 'AES_KEY'), %s, PGP_SYM_ENCRYPT(%s, 'AES_KEY'));"""
+
+                cur.execute(invoice_insert_query, (info["invoice_number"], info["customer_name"],
+                info["date"], info["phone"], info["street"], info["city"], info["labor_warranty"], info["material_warranty"],
+                info["item_to_be_serviced"], info["make"], info["model_no"], info["serial_no"], info["customer_complaint"],
+                info["email_address"], info["work_order_number"], info["authorization_number"], info["job_estimate"], info["tech_name"],
+                json.dumps(info["part_rows"]), info["tech_report"], info["card_type"], info["card_number"], info["exp_date"], info["cvc"], is_signed, signature))
+
+                conn.commit()
+
+                return jsonify(f"Invoice {info['invoice_number']} Is Generated")
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/sign_invoice/<invoiceID>/<signature>", methods=["POST"])
+@cross_origin(support_credentials=True)
+def sign_invoice(invoiceID, signature):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            # print(request.headers["token"])
+
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get(
+                    "key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+            except Exception as e:
+                return jsonify(e)
+
+            sign_query = """UPDATE "Invoice"."ClientInvoice" SET  is_signed=%s, signature=crypt(%s, gen_salt('md5')) WHERE "invoiceID" = %s;"""
+
+            cur.execute(sign_query, (True, signature, invoiceID))
+
+            conn.commit()
+
+            html_string = ""
+
+            with open(f'templates\invoices_{invoiceID}.html', "r") as f:
+                html_string = f.read()
+
+                html_string = html_string.replace("Not Signed Yet", signature)
+            
+            with open(f'templates\invoices_{invoiceID}.html', "w") as wf:
+                wf.write(html_string)
+
+            try:
+
+                pdf.from_file(f'templates\invoices_{invoiceID}.html',
+                                  f'internal_invoices\invoice_{invoiceID}.pdf')
+
+            except Exception as ex:
+                print(ex)
+
+            return jsonify("ok")
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/delete_invoice/<invoiceID>", methods=["POST"])
+@cross_origin(support_credentials=True)
+def delete_invoice(invoiceID):
+    import os
+
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            # print(request.headers["token"])
+
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get(
+                    "key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+            except Exception as e:
+                return jsonify(e)
+
+            delete_query = f"""DELETE FROM "Invoice"."ClientInvoice" WHERE "invoiceID" = {invoiceID};"""
+
+            cur.execute(delete_query)
+
+            conn.commit()
+
+            os.remove(f'templates\invoices_{invoiceID}.html')
+
+            os.remove(f'internal_invoices\invoice_{invoiceID}.pdf')
+
+            return jsonify(f"Invoice {invoiceID} Is Deleted")
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/delete_invoices/<start_date>/<end_date>", methods=["POST"])
+@cross_origin(support_credentials=True)
+def delete_invoices(start_date,end_date):
+    import os
+
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            # print(request.headers["token"])
+
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get(
+                    "key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+            except Exception as e:
+                return jsonify(e)
+
+            select_query = f"""SELECT "invoiceID" FROM "Invoice"."ClientInvoice" WHERE created_date BETWEEN '{start_date}' AND '{end_date}';"""
+
+            cur.execute(select_query)
+
+            rows = cur.fetchall()
+
+            delete_query = f"""DELETE FROM "Invoice"."ClientInvoice" WHERE created_date BETWEEN '{start_date}' AND '{end_date}';"""
+
+            cur.execute(delete_query)
+
+            conn.commit()
+
+            for id in rows:
+
+                os.remove(f'templates\invoices_{id[0]}.html')
+
+                os.remove(f'internal_invoices\invoice_{id[0]}.pdf')
+
+            return jsonify(f"Invoices From {start_date} To {end_date}  Are Deleted")
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_invoice/<invoiceID>/<return_type>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_invoice(invoiceID,return_type):
+    import os
+    from pdf2image import convert_from_path
+    import base64
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            # print(request.headers["token"])
+
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get(
+                    "key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+            except Exception as e:
+                return jsonify(e)
+            if not os.path.exists(f"internal_invoices\invoice_{invoiceID}.pdf"):
+                return jsonify(f"The invoice with ID# {invoiceID} does not exist")
+            else:
+                if return_type == "base64":
+                    images = convert_from_path(f"internal_invoices\invoice_{invoiceID}.pdf")
+                    for page in images:
+                        page.save('temp_img.jpg', 'JPEG')
+                    b64_string =""
+
+                    with open("temp_img.jpg", "rb") as img_file:
+                        b64_string = base64.b64encode(img_file.read())
+
+                    return jsonify(b64_string.decode('ascii'))
+
+                elif return_type == "pdf":
+                    return send_file(f"internal_invoices\invoice_{invoiceID}.pdf",as_attachment=True)
+
+    except Exception as e:
+        return jsonify(e)
+
+@app.route("/get_invoices_info/<start_date>/<end_date>", methods=["GET"])
+@cross_origin(support_credentials=True)
+def get_invoices_info(start_date,end_date):
+    try:
+        if "token" not in request.headers:
+            return jsonify("no token in the header")
+        else:
+            # print(request.headers["token"])
+
+            try:
+                profile = jwt.decode(request.headers["token"], key=app_conf.get(
+                    "key", "secret_key"), algorithms=["HS256"])
+
+                print(profile)
+            except Exception as e:
+                return jsonify(e)
+
+            select_query = f"""SELECT "invoiceID", PGP_SYM_DECRYPT(customer::bytea, 'AES_KEY') as customer, created_date, serviced_item, PGP_SYM_DECRYPT(tech_name::bytea, 'AES_KEY') as tech_name,  is_signed FROM "Invoice"."ClientInvoice" WHERE created_date BETWEEN '{start_date}' AND '{end_date}';"""
+
+            cur.execute(select_query)
+
+            rows = cur.fetchall()
+
+            cols = cur.description
+
+            columns = []
+
+            for col in cols:
+                columns.append(col[0])
+            out = []
+
+            for row in rows:
+                out.append(dict(zip(columns, row)))
+            
+            return jsonify(out)
+
+    except Exception as e:
+        return jsonify(e)
 
 @app.route("/authentication/", methods=["POST", "OPTIONS"])
 @cross_origin(support_credentials=True)
@@ -733,7 +1145,6 @@ def get_authentication():
 
     except Exception as e:
         return jsonify(e)
-
 
 @app.route("/connection_test", methods=["GET", "POST"])
 @cross_origin(support_credentials=True)

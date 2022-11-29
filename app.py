@@ -874,11 +874,11 @@ def generate_invoice():
                 if info["card_type"] == "Visa":
                     html_string = html_string.replace("{visa}", "checked")
                 elif info["card_type"] == "Mastercard":
-                    html_string = html_string.replace("{mc}", "#checked")
+                    html_string = html_string.replace("{mc}", "checked")
                 elif info["card_type"] == "AMEX":
-                    html_string = html_string.replace("{amex}", "#checked")
+                    html_string = html_string.replace("{amex}", "checked")
                 elif info["card_type"] == "Discover":
-                    html_string = html_string.replace("{disc}", "#checked")
+                    html_string = html_string.replace("{disc}", "checked")
 
                 with open(f'templates\invoices_{info["invoice_number"]}.html', "w") as wf:
                     wf.write(html_string)
@@ -887,7 +887,6 @@ def generate_invoice():
                     outf.write("")
 
                 try:
-
                     pdf.from_file(f'templates\invoices_{info["invoice_number"]}.html',
                                   f'internal_invoices\invoice_{info["invoice_number"]}.pdf')
 
@@ -1055,19 +1054,23 @@ def get_invoice(invoiceID,return_type):
             if not os.path.exists(f"internal_invoices\invoice_{invoiceID}.pdf"):
                 return jsonify(f"The invoice with ID# {invoiceID} does not exist")
             else:
+                #print(request.headers)
                 if return_type == "base64":
-                    images = convert_from_path(f"internal_invoices\invoice_{invoiceID}.pdf")
+
+                    images = convert_from_path(pdf_path=f"internal_invoices\invoice_{invoiceID}.pdf",size=(720, 900))
+
                     for page in images:
                         page.save('temp_img.jpg', 'JPEG')
                     b64_string =""
 
                     with open("temp_img.jpg", "rb") as img_file:
                         b64_string = base64.b64encode(img_file.read())
+                    print("ok")
 
                     return jsonify(b64_string.decode('ascii'))
 
                 elif return_type == "pdf":
-                    return send_file(f"internal_invoices\invoice_{invoiceID}.pdf",as_attachment=True)
+                    return send_file(f"internal_invoices\invoice_{invoiceID}.pdf",as_attachment=False)
 
     except Exception as e:
         return jsonify(e)
@@ -1687,5 +1690,5 @@ def create_job():
 """
 # running driver
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5020, debug=True)
-    #serve(app,host="0.0.0.0", port=5020)
+    #app.run(host="0.0.0.0", port=5020, debug=True)
+    serve(app,host="0.0.0.0", port=5020)

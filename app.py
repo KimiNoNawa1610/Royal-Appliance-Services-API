@@ -1,3 +1,8 @@
+from os.path import basename
+from email.utils import COMMASPACE, formatdate
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 import json
 from flask import Flask, request, jsonify, send_file, make_response
 from flask_cors import CORS, cross_origin
@@ -8,6 +13,7 @@ import os
 import psycopg2
 import jwt
 from waitress import serve
+import smtplib
 
 app = Flask(__name__)
 cors = CORS(app, support_credentials=True)
@@ -38,6 +44,38 @@ cur.execute('SELECT version()')
 db_version = cur.fetchone()
 
 print(db_version)
+
+def send_mail(send_to, subject, text, files):
+
+    assert isinstance(send_to, list)
+    #print(files)
+
+    msg = MIMEMultipart()
+    msg['From'] = app_conf["email"]["user"]
+    msg['To'] = ", ".join(send_to)
+    msg['Date'] = formatdate(localtime=True)
+    msg['Subject'] = subject
+
+    msg.attach(MIMEText(text))
+
+    for f in files or []:
+        with open(f, "rb") as fil:
+            part = MIMEApplication(
+                fil.read(),
+                Name=basename(f)
+            )
+        # After the file is closed
+        part['Content-Disposition'] = 'attachment; filename="%s"' % basename(f)
+        msg.attach(part)
+
+    smtp = smtplib.SMTP('smtp.gmail.com', 587)
+
+    smtp.starttls()
+    print(app_conf["email"]["user"],app_conf["email"]["password"])
+    # Authentication
+    smtp.login(app_conf["email"]["user"], app_conf["email"]["password"])
+    smtp.sendmail(app_conf["email"]["user"], send_to, msg.as_string())
+    smtp.close()
 
 """
 args ex:
@@ -800,7 +838,7 @@ def generate_invoice():
 
                 info = request.get_json()
 
-                #print(info)
+                # print(info)
 
                 html_string = ""
 
@@ -904,6 +942,13 @@ def generate_invoice():
                 json.dumps(info["part_rows"]), info["tech_report"], info["card_type"], info["card_number"], info["exp_date"], info["cvc"], is_signed, signature))
 
                 conn.commit()
+
+                try:
+                    
+                    send_mail(send_to=[info["email_address"]],text="This is a copy of the invoice.",subject=f"Invoice {info['invoice_number']} From Royal Appliance Service",files=[f"internal_invoices\invoice_{info['invoice_number']}.pdf"])
+                    pass
+                except Exception as ex:
+                    print(ex)
 
                 return jsonify(f"Invoice {info['invoice_number']} Is Generated")
 

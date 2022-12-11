@@ -13,9 +13,9 @@ Open a terminal in the code folder with vscode or pycharm:
 <br>
 <br>Type: <b>pip install -r requirements.txt</b>
 <br>
-After that, if no error with the packages,
+<br>After that, if no error with the packages,
 <br>
-You can run: <b>python3 app.py to run the api</b>
+<br>You can run: <b>python3 app.py to run the api</b>
 
 
 

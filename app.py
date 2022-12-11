@@ -1,5 +1,5 @@
 from os.path import basename
-from email.utils import COMMASPACE, formatdate
+from email.utils import formatdate
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -15,14 +15,17 @@ import jwt
 from waitress import serve
 import smtplib
 
+#initialize API
 app = Flask(__name__)
 cors = CORS(app, support_credentials=True)
 app.config["CORS_HEADERS"] = 'Content-Type'
-app.config["SECRET_KEY"] = 'ROYALAPPLIANCE2022!'
+app.config["SECRET_KEY"] = 'ROYALAPPLIANCE2022!'#secret key of the api, for future deployment
 
+#read the config file
 app_conf = configparser.ConfigParser()
 app_conf.read("app.config")
 
+#connect to the database
 db = {}
 if app_conf.has_section("postgresql"):
     params = app_conf.items("postgresql")
@@ -43,7 +46,20 @@ cur.execute('SELECT version()')
 
 db_version = cur.fetchone()
 
+#print our the database information
 print(db_version)
+
+"""
+send_mail function:
+params: 
+
+send_to: the list of senders
+subject: the string for the email subject
+text: the text in the email body
+files: a list of files name to attach to that email
+
+return: none
+"""
 
 def send_mail(send_to, subject, text, files):
 
@@ -84,10 +100,23 @@ json = {"amount_due","rows":[{"item":"name","description":"something","rate":"pa
 "paid":,"due","note":(optional)}
 """
 
+"""
+get_employee_id end point
 
+method: GET
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_employee_name: the name of the employee that we want to get the id
+
+return: the id of an employee if that employee exist else, return error message.
+
+"""
 @app.route("/get_employee_id/<_employee_name>", methods=["GET"])
 @cross_origin(support_credentials=True)
-def get_employee_name(_employee_name):
+def get_employee_id(_employee_name):
     try:
         if "token" not in request.headers:
             return jsonify("no token in the header")
@@ -106,13 +135,28 @@ def get_employee_name(_employee_name):
             postgres_employee_name_search = f'''SELECT "employeeID" FROM "Employee"."Employees" WHERE name = '{_employee_name}';'''
             cur.execute(postgres_employee_name_search)
             row = cur.fetchone()
-
-            return jsonify({"employeeID": row[0]})
+            if len(row)>0:
+                return jsonify({"employeeID": row[0]})
+            else:
+                return jsonify("The employee does not exist.")
 
     except Exception as e:
         return jsonify(e)
 
+"""
+get_client_id end point
 
+method: GET
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_client_name: the name of the client that we want to get the id
+
+return: the id of an client if that employee exist else, return error message.
+
+"""
 @app.route("/get_client_id/<_client_name>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_client_id(_client_name):
@@ -134,13 +178,29 @@ def get_client_id(_client_name):
             postgres_client_name_search = f'''SELECT "clientID" FROM "Client"."Clients" WHERE name = '{_client_name}';'''
             cur.execute(postgres_client_name_search)
             row = cur.fetchone()
-
-            return jsonify({"clientID": row[0]})
+            if len(row)>0:
+                return jsonify({"clientID": row[0]})
+            else:
+                return jsonify("The client does not exist.")
 
     except Exception as e:
         return jsonify(e)
 
+"""
+add_client end point
 
+method: POST
+
+add the new client to the database and update if that client already exist
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+json string: the dictionary contains all required information about the client
+
+return: the message of the action
+"""
 @app.route("/add_client", methods=["POST"])
 @cross_origin(support_credentials=True)
 def add_client():
@@ -196,7 +256,22 @@ def add_client():
     except Exception as e:
         return jsonify(e)
 
+"""
+job_is_finished end point
 
+method: POST
+
+Update the job status
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_job_id: the id of the job that we want to update the status
+_completed: the status of the job completion (true or false)
+
+return: the message of the action
+"""
 @app.route("/job_is_finished/<_job_id>/<_completed>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def job_is_finished(_job_id, _completed):
@@ -229,9 +304,23 @@ def job_is_finished(_job_id, _completed):
     except Exception as e:
         return jsonify(e)
 
-# FIXED
 
+"""
+get_all_employees end point
 
+method: POST
+
+Update the job status
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_job_id: the id of the job that we want to update the status
+_completed: the status of the job completion (true or false)
+
+return: the list of all employees
+"""
 @app.route("/get_all_employees/", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_all_employees():
@@ -279,7 +368,21 @@ def get_all_employees():
     except Exception as e:
         return jsonify(e)
 
+"""
+get_all_clients end point
 
+method: GET
+
+get the list of all clients
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+none
+
+return: the list of all client
+"""
 @app.route("/get_all_clients/", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_all_clients():
@@ -317,9 +420,22 @@ def get_all_clients():
     except Exception as e:
         return jsonify(e)
 
-# FIXED
 
+"""
+get_employee end point
 
+method: GET
+
+get the information of the employee by id
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_id: the id of the employee
+
+return: a dictionary with all employee information
+"""
 @app.route("/get_employee/<_id>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_employee(_id):
@@ -349,9 +465,21 @@ def get_employee(_id):
     except Exception as e:
         return jsonify(e)
 
-# FIXED
+"""
+add_employee end point
 
+method: POST
 
+add the new employee to the database or update the employee if that employee already exist
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+json string: the dictionary contain all required information about the employee want to add or update
+
+return: the message of the action of the end point
+"""
 @app.route("/add_employee/", methods=["POST"])
 @cross_origin(support_credentials=True)
 def add_employee():
@@ -405,7 +533,22 @@ def add_employee():
     except Exception as e:
         return jsonify(e)
 
+"""
+get_all_jobs end point
 
+method: GET
+
+get the all the jobs from a specific timestamp
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_start_date: the first day of the job
+_end_date: the last day of the job
+
+return: the list of jobs information
+"""
 @app.route("/get_all_jobs/<_start_date>/<_end_date>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_all_jobs(_start_date, _end_date):
@@ -438,7 +581,24 @@ def get_all_jobs(_start_date, _end_date):
     except Exception as e:
         return jsonify(e)
 
+"""
+get_jobs end point
 
+method: GET
+
+get the information about the jobs of an employee
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_employee_id: the id of an employee
+_start_date: the first day of the job
+_end_date: the last day of the job
+_completed: the completion status of the job
+
+return: the list of jobs information
+"""
 @app.route("/get_jobs/<_employee_id>/<_start_date>/<_end_date>/<_completed>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_jobs(_employee_id, _start_date, _end_date, _completed):
@@ -480,7 +640,22 @@ INNER JOIN "Client"."Clients" ON "Clients"."clientID"="Jobs"."clientID" WHERE "E
     except Exception as e:
         return jsonify(e)
 
+"""
+delete_jobs end point
 
+method: POST
+
+delete jobs from specific timestamp
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_start_date: the first day of the job
+_end_date: the last day of the job
+
+return: the message of the action
+"""
 @app.route("/delete_jobs/<_start_date>/<_end_date>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def delete_jobs(_start_date, _end_date):
@@ -509,9 +684,23 @@ def delete_jobs(_start_date, _end_date):
     except Exception as e:
         return jsonify(e)
 
-# Working
+"""
+assign_job end point
 
+method: POST
 
+assign a job to specific employee
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_client_id: the id of the client
+_employee_id: the id of the employee
+json string: the dictionary contains all required information of the job
+
+return: the message of the action
+"""
 @app.route("/assign_job/<_client_id>/<_employee_id>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def assign_job(_client_id, _employee_id):
@@ -570,9 +759,21 @@ def assign_job(_client_id, _employee_id):
     except Exception as e:
         return jsonify(e)
 
-# Fixed
+"""
+delete_employee end point
 
+method: POST
 
+delete an employee from the database
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_id: the employee id
+
+return: the message of the action
+"""
 @app.route("/delete_employee/<_id>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def delete_employee(_id):
@@ -601,7 +802,23 @@ def delete_employee(_id):
     except Exception as e:
         return jsonify(e)
 
+"""
+generate_tech_income_sheet end point
 
+method: POST, OPTIONS
+
+generate an income sheet that contains income information for an employee with specific invoice
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_employee_id: the employee id
+invoice_id: the id of the invoice that the employee want to report income
+json string: the dicionary contains all information about the income detail
+
+return: the message of the action
+"""
 @app.route("/generate_tech_income_sheet/<_employee_id>/<invoice_id>", methods=["POST", "OPTIONS"])
 @cross_origin(support_credentials=True)
 def generate_tech_income_sheet(_employee_id, invoice_id):
@@ -661,7 +878,23 @@ def generate_tech_income_sheet(_employee_id, invoice_id):
     except Exception as ex:
         return jsonify(ex)
 
+"""
+get_tech_income_sheet end point
 
+method: GET
+
+get the information of the income with specific timestamp of an employee
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_employee_id: the employee id
+day_start: the first day that we want to search
+day_end: the last day that we want to search
+
+return: the list of income sheet for that employee
+"""
 @app.route("/get_tech_income_sheet/<_employee_id>/<day_start>/<day_end>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_tech_income_sheet(_employee_id, day_start, day_end):
@@ -705,7 +938,21 @@ def get_tech_income_sheet(_employee_id, day_start, day_end):
     except Exception as e:
         return jsonify(e)
 
+"""
+get_all_jobs_withoutdate end point
 
+method: GET
+
+get all jobs 
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+none
+
+return: the list of all the jobs
+"""
 @app.route("/get_all_jobs_withoutdate", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_all_jobs_withoutdate():
@@ -738,7 +985,21 @@ def get_all_jobs_withoutdate():
     except Exception as e:
         return jsonify(e)
 
+"""
+generate_invoice end point
 
+method: POST
+
+generate and send the invoice from the finished job
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+json string: a dictionary that contain all information about the job and related details.
+
+return: the message of the action
+"""
 @app.route("/generate_invoice", methods=["POST"])
 @cross_origin(support_credentials=True)
 def generate_invoice():
@@ -955,6 +1216,22 @@ def generate_invoice():
     except Exception as e:
         return jsonify(e)
 
+"""
+sign_invoice end point
+
+method: POST
+
+for the client to sign an invoice
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+invoiceID: the id of the invoice
+signature: the string signature
+
+return: the message of the action
+"""
 @app.route("/sign_invoice/<invoiceID>/<signature>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def sign_invoice(invoiceID, signature):
@@ -1001,6 +1278,21 @@ def sign_invoice(invoiceID, signature):
     except Exception as e:
         return jsonify(e)
 
+"""
+delete_invoice end point
+
+method: POST
+
+delete a specific invoice with an id
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+invoiceID: the id of the invoice
+
+return: the message of the action
+"""
 @app.route("/delete_invoice/<invoiceID>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def delete_invoice(invoiceID):
@@ -1035,6 +1327,22 @@ def delete_invoice(invoiceID):
     except Exception as e:
         return jsonify(e)
 
+"""
+delete_invoices end point
+
+method: POST
+
+delete invoices with specific time stamp
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+start_date: the first day to delete
+end_date: the last day to delete
+
+return: the message of the action
+"""
 @app.route("/delete_invoices/<start_date>/<end_date>", methods=["POST"])
 @cross_origin(support_credentials=True)
 def delete_invoices(start_date,end_date):
@@ -1077,6 +1385,22 @@ def delete_invoices(start_date,end_date):
     except Exception as e:
         return jsonify(e)
 
+"""
+get_invoice end point
+
+method: GET
+
+get an invoice informaton for specific invoice with specific return type
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+invoiceID: the id of an invoice
+return_type: the type that the invoice should be return (pdf or base 64 string)
+
+return: the invoice information or a pdf of the invoice
+"""
 @app.route("/get_invoice/<invoiceID>/<return_type>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_invoice(invoiceID,return_type):
@@ -1120,6 +1444,22 @@ def get_invoice(invoiceID,return_type):
     except Exception as e:
         return jsonify(e)
 
+"""
+get_invoices_info end point
+
+method: GET
+
+get invoices informaton for specific timestamp
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+start_date: the first day we want to search
+end_date: the last day we want to search
+
+return: the invoices information
+"""
 @app.route("/get_invoices_info/<start_date>/<end_date>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_invoices_info(start_date,end_date):
@@ -1159,6 +1499,22 @@ def get_invoices_info(start_date,end_date):
     except Exception as e:
         return jsonify(e)
 
+"""
+authentication end point
+
+method: POST, OPTIONS
+
+authenticate and assign a token to a login session depend on the user type (admin or normal user)
+
+headers:
+none
+
+params:
+json_string: contains email and password for the login information
+
+return: the basic information if the user exist with correct password and an authentication token for that sessions
+note: the token will expire after logout, and cannot be used again.
+"""
 @app.route("/authentication/", methods=["POST", "OPTIONS"])
 @cross_origin(support_credentials=True)
 def get_authentication():
@@ -1194,14 +1550,43 @@ def get_authentication():
     except Exception as e:
         return jsonify(e)
 
+"""
+connection_test end point
+
+method: GET, POST
+
+test authentication to the server
+
+headers:
+none
+
+params:
+none
+
+return: Rest API is running or error out
+"""
 @app.route("/connection_test", methods=["GET", "POST"])
 @cross_origin(support_credentials=True)
 def connection_test():
     return jsonify("Rest API is running")
 
-#Cleaner queries for jobs
+"""
+get_past_jobs end point
 
-#Past
+method: GET
+
+get past jobs for an employee with specific timestamp
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_employee_id: the employee id
+_end_date: the date finish of the job
+_completed: the job status
+
+return: list of jobs information
+"""
 @app.route("/get_past_jobs/<_employee_id>/<_end_date>/<_completed>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_past_jobs(_employee_id, _end_date, _completed):
@@ -1245,7 +1630,23 @@ def get_past_jobs(_employee_id, _end_date, _completed):
     except Exception as e:
         return jsonify(e)
 
-#Present
+"""
+get_present_jobs end point
+
+method: GET
+
+get current jobs for an employee with specific timestamp
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_employee_id: the employee id
+_end_date: the date finish of the job
+_completed: the job status
+
+return: list of jobs information
+"""
 @app.route("/get_present_jobs/<_employee_id>/<_start_date>/<_end_date>/<_completed>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_present_jobs(_employee_id, _start_date, _end_date, _completed):
@@ -1289,7 +1690,23 @@ def get_present_jobs(_employee_id, _start_date, _end_date, _completed):
     except Exception as e:
         return jsonify(e)
     
-#Future
+"""
+get_future_jobs end point
+
+method: GET
+
+get future jobs for an employee with specific timestamp
+
+headers:
+token: an authentication token to identify if the user is allow to perform this action
+
+params:
+_employee_id: the employee id
+_end_date: the date finish of the job
+_completed: the job status
+
+return: list of jobs information
+"""
 @app.route("/get_future_jobs/<_employee_id>/<_start_date>/<_completed>", methods=["GET"])
 @cross_origin(support_credentials=True)
 def get_future_jobs(_employee_id, _start_date, _completed):
